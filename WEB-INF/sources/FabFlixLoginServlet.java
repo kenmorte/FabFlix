@@ -3,6 +3,7 @@
 
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
@@ -14,13 +15,52 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-public class FabFlixTest extends HttpServlet {
+import org.json.*;
+
+
+public class FabFlixLoginServlet extends HttpServlet {
     public String getServletInfo() {
         return "Servlet connects to MySQL database and displays result of a SELECT";
     }
+    
+    // HTTP Post
+    public void doPost(HttpServletRequest request, HttpServletResponse response)
+            throws IOException, ServletException {
+    	String email = request.getParameter("email");
+    	String password = request.getParameter("password");
+    	StringWriter out = new StringWriter();
+    	JSONObject result = new JSONObject();
+    	FabFlixRESTManager restManager;
+    	
+    	response.setContentType("text/json");	// Response mime type
+    	try {
+    		restManager = new FabFlixRESTManager(out);
+    		restManager.attemptConnection();
+    		JSONObject userJSON = restManager.getUserInfo(email, password);
+    		
+    		result.put("error", "null");
+    		if (userJSON != null) {
+        		result.put("user", userJSON.toString());
+        		result.put("message", "success");
+        		
+    		} else {
+    			result.put("user", "null");
+    			result.put("message", "Invalid e-mail/password combination.");
+    		}
+
+        	out.write(result.toString());
+    		restManager.closeConnection();
+    		
+    	} catch (Exception e) {
+    		out.flush();
+    		out.write("{ error: '" + e.getClass().getName() + "', user: null, message: \"" + e.getMessage() + "' }");
+    	}
+    	
+    	response.getWriter().write(out.toString() + "\n");
+    	out.close();
+    }
 
     // Use http GET
-
     public void doGet(HttpServletRequest request, HttpServletResponse response) throws IOException, ServletException {
         String loginUser = "mytestuser";
         String loginPasswd = "mypassword";

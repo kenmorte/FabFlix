@@ -31,13 +31,13 @@
 
 
   <servlet>
-    <servlet-name>FabFlixTestServlet</servlet-name>
-    <servlet-class>FabFlixTest</servlet-class>
+    <servlet-name>FabFlixLoginServlet</servlet-name>
+    <servlet-class>FabFlixLoginServlet</servlet-class>
   </servlet>
 
   <servlet-mapping>
-    <servlet-name>FabFlixTestServlet</servlet-name>
-    <url-pattern>/servlet/FabFlixTest</url-pattern>
+    <servlet-name>FabFlixLoginServlet</servlet-name>
+    <url-pattern>/servlet/FabFlixLoginServlet</url-pattern>
   </servlet-mapping>
 
 
