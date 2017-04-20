@@ -1,0 +1,32 @@
+<div class="col-md-12">
+  <form ng-submit="formSubmit()" class="form">
+  	<div class="col-md-4"></div>
+  	
+    <div class="col-md-4">
+      <div class="form-group">
+      	<div class="input-group">
+	      	<div class="input-group-addon"><span class="glyphicon glyphicon-envelope"></span> </div>
+      		<input type="text" class="form-control" ng-model="email" placeholder="E-mail address" required=""/>
+      	</div>
+      </div> 
+
+      <div class="form-group">
+      	<div class="input-group">
+      		<div class="input-group-addon"><span class="glyphicon glyphicon-lock"></span> </div>
+      		<input type="password" class="form-control" ng-model="password" placeholder="Password" required=""/>
+      	</div>
+      </div>
+
+      <div class="form-group">
+        <button ng-disabled="loggingIn" type="submit" class="btn btn-block btn-primary start" id="loginButton">
+        	<span ng-show="loggingIn">Logging in</span>
+        	<span ng-hide="loggingIn">Login</span>
+        </button>
+        <span class="text-danger">{{ error }}</span>
+      </div>
+      
+      <div class="col-md-4"></div>
+
+    </div>
+  </form>
+</div>

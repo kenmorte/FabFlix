@@ -46,7 +46,7 @@ public class FabFlixRESTManager
 			if (mDatabase != null && !mDatabase.isClosed())
 				mDatabase.close();
 		} catch (SQLException e) {
-			writeErrorMessage("{error: 'SQLException', user: null, message: '" + e.getMessage() + "'}");
+			writeErrorMessage("{\"error\": \"SQLException\", \"message\": \"" + e.getMessage() + "\"}");
 		}
 	}
 	
@@ -60,14 +60,14 @@ public class FabFlixRESTManager
 			return mDatabase != null && !mDatabase.isClosed();
 			
 		} catch (SQLException e) {
-			writeErrorMessage("{error: 'SQLException', user: null, message: '" + e.getMessage() + "'}");
+			writeErrorMessage("{\"error\": \"SQLException\", \"message\": \"" + e.getMessage() + "\"}");
 			return false;
 		}
 	}
 	
 	public JSONObject getUserInfo(String email, String password) throws SQLException, JSONException {
 		if (email == null || password == null) {
-			writeErrorMessage("{error: 'LoginException', user: null, message: 'No email and/or password provided!'}");
+			writeErrorMessage("{\"error\": \"LoginException\", \"message\": \"No email and/or password provided!\"}");
 			return null;
 		}
 		
@@ -76,7 +76,7 @@ public class FabFlixRESTManager
 		JSONObject json = null;
 		
 		select = mDatabase.createStatement();
-		result = select.executeQuery("select * from customers where email='" + email + "' and password='" + password + "'");
+		result = select.executeQuery("select * from customers where email=\"" + email + "\" and password=\"" + password + "\"");
 		if (result.next()) {
 			json = new JSONObject();
 			json.put("id", result.getInt(1));

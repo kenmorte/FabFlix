@@ -32,7 +32,8 @@ public class FabFlixLoginServlet extends HttpServlet {
     	JSONObject result = new JSONObject();
     	FabFlixRESTManager restManager;
     	
-    	response.setContentType("text/json");	// Response mime type
+    	response.setContentType("application/json");
+        response.setCharacterEncoding("UTF-8");
     	try {
     		restManager = new FabFlixRESTManager(out);
     		restManager.attemptConnection();
@@ -44,17 +45,22 @@ public class FabFlixLoginServlet extends HttpServlet {
         		result.put("message", "success");
         		
     		} else {
-    			result.put("user", "null");
+    			result.remove("user");
     			result.put("message", "Invalid e-mail/password combination.");
     		}
-
-        	out.write(result.toString());
+    		
+    		if (out.toString().isEmpty())
+    			out.write(result.toString());
     		restManager.closeConnection();
     		
     	} catch (Exception e) {
     		out.flush();
-    		out.write("{ error: '" + e.getClass().getName() + "', user: null, message: \"" + e.getMessage() + "' }");
+    		out.write("{ \"error\": \"" + e.getClass().getName() + "\", \"message\": \"" + e.getMessage() + "\" }");
     	}
+    	
+    	response.addHeader("Access-Control-Allow-Origin","*");
+    	response.addHeader("Access-Control-Allow-Methods","GET,POST");
+        response.addHeader("Access-Control-Allow-Headers","Origin, X-Requested-With, Content-Type, Accept");
     	
     	response.getWriter().write(out.toString() + "\n");
     	out.close();
