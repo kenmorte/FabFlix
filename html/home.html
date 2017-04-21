@@ -1,5 +1,83 @@
-<div class="col-md-12">
-  <h3>Home Page</h3>
-
-  <a ui-sref="login">Back</a>
+<div class="container-fluid">
+	<nav class="navbar navbar-default">
+		<div class="navbar-header">
+			<button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+				<span class="icon-bar"></span>
+				<span class="icon-bar"></span>
+				<span class="icon-bar"></span>
+			</button>    
+		</div>
+		<a class="navbar-brand" href="#">FabFlix</a>
+			
+		<div class="container-fluid">
+			<!-- Collect the nav links, forms, and other content for toggling -->
+			<div class="navbar-collapse collapse">
+				<ul class="nav navbar-nav navbar-left">
+			    	<li>
+			    		<a ui-sref="home"><span class="glyphicon glyphicon-home"></span>
+			    			Home
+			    		</a>
+			    	</li>
+			    	<li>
+			    		<a ui-sref="home">
+			    			<span class="glyphicon glyphicon-shopping-cart"></span>
+			    			Shopping Cart
+			    		</a>
+			    	</li>
+			    	<li>
+			    		<a ui-sref="login">
+			    			<span class="glyphicon glyphicon-log-out"></span>
+			    			Logout
+			    		</a>
+			    	</li>
+				</ul>
+			</div>
+		</div>
+	</nav>
+	
+	<div class="container-fluid">
+		<h3>Search</h3>
+		
+		<form name="searchForm" id='searchForm' class="form-group">
+			<div class="form-group">
+				<label for="titleInput"><b>Title</b></label>
+				<input type="text" class="form-control" id="titleInput" placeholder="e.g. 'The Godfather'">
+			</div>
+			
+			<div class="form-group">
+				<label for="yearInput"><b>Year</b></label>
+				<input type="number" class="form-control" id="yearInput" placeholder="e.g. '1972'">
+			</div>
+			
+			<div class="form-group">
+				<label for="directorInput"><b>Director</b></label>
+				<input type="text" class="form-control" id="directorInput" placeholder="e.g. 'Francis Ford Coppola'">
+			</div>
+			
+			<div class="form-group">
+				<label for="starFirstName"><b>Star First Name</b></label>
+				<input type="text" class="form-control" id="starFirstName" placeholder="e.g. 'Marlon'">
+			</div>
+			
+			<div class="form-group">
+				<label for="starLastName"><b>Star Last Name</b></label>
+				<input type="text" class="form-control" id="starLastName" placeholder="e.g. 'Brando'">
+			</div>
+			
+			<div class="form-group">
+				<button class="btn btn-primary" type="button">Search</button>
+			</div>
+		</form>
+		<hr />
+	</div>
+	
+	<div class="container-fluid">
+		<h3>Browse by Movie Genre</h3>
+		<hr />
+	</div>
+	
+	<div class="container-fluid">
+		<h3>Browse by Movie Title</h3>
+		<hr />
+	</div>
 </div>
