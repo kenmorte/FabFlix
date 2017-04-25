@@ -24,19 +24,21 @@
 			    			Shopping Cart
 			    		</a>
 			    	</li>
+				</ul>
+			    <ul class="nav navbar-nav navbar-right">
 			    	<li>
 			    		<a ui-sref="login">
 			    			<span class="glyphicon glyphicon-log-out"></span>
 			    			Logout
 			    		</a>
 			    	</li>
-				</ul>
+			    </ul>
 			</div>
 		</div>
 	</nav>
 	
 	<div class="container-fluid">
-		<h3>Search</h3>
+		<h3>Search For Movies</h3>
 		
 		<form name="searchForm" id='searchForm' class="form-group">
 			<div class="form-group">
@@ -73,11 +75,25 @@
 	
 	<div class="container-fluid">
 		<h3>Browse by Movie Genre</h3>
+		<ul class="list-unstyled inline" style="display: inline-block; padding:10px;">
+		    <li ng-repeat="genre in genreList.slice(0,10)"><a style="cursor: pointer;" ui-sref="#">{{genre}}</a></li>
+		</ul>
+		
+		<ul class="list-unstyled inline" style="display: inline-block; padding:10px;">
+		    <li ng-repeat="genre in genreList.slice(10,20)"><a style="cursor: pointer;" ui-sref="#">{{genre}}</a></li>
+		</ul>
+		
+		<ul class="list-unstyled inline" style="display: inline-block; padding:10px;">
+		    <li ng-repeat="genre in genreList.slice(20,30)"><a style="cursor: pointer;" ui-sref="#">{{genre}}</a></li>
+		</ul>
 		<hr />
 	</div>
 	
 	<div class="container-fluid">
 		<h3>Browse by Movie Title</h3>
+		<ul class="list-inline list-unstyled">
+			<li ng-repeat="char in charList" class="list-inline-item"><a style="cursor: pointer;" ng-model="charLink" ng-click="browseByMovieTitle($event)">{{char}}</a></li>
+		</ul>
 		<hr />
 	</div>
 </div>

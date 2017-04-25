@@ -1,0 +1,126 @@
+<div class="container-fluid">
+	<nav class="navbar navbar-default">
+		<div class="navbar-header">
+			<button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+				<span class="icon-bar"></span>
+				<span class="icon-bar"></span>
+				<span class="icon-bar"></span>
+			</button>    
+		</div>
+		<a class="navbar-brand" href="#">FabFlix</a>
+			
+		<div class="container-fluid">
+			<!-- Collect the nav links, forms, and other content for toggling -->
+			<div class="navbar-collapse collapse">
+				<ul class="nav navbar-nav navbar-left">
+			    	<li>
+			    		<a ui-sref="home"><span class="glyphicon glyphicon-home"></span>
+			    			Home
+			    		</a>
+			    	</li>
+			    	<li>
+			    		<a ui-sref="home">
+			    			<span class="glyphicon glyphicon-shopping-cart"></span>
+			    			Shopping Cart
+			    		</a>
+			    	</li>
+				</ul>
+			    <ul class="nav navbar-nav navbar-right">
+			    	<li>
+			    		<a ui-sref="login">
+			    			<span class="glyphicon glyphicon-log-out"></span>
+			    			Logout
+			    		</a>
+			    	</li>
+			    </ul>
+			</div>
+		</div>
+	</nav>
+	
+	
+	<div class="container">
+		<h3>Search Results</h3>
+		<hr />
+		
+		<!-- Loading animation while page is loading -->
+		<div ng-show="loading" class="text-center">
+			<i class="fa fa-spinner fa-spin fa-3x fa-fw"></i>
+		</div>
+		
+		<!-- No results screen if no results were found -->
+		<div ng-show="(!data || !data.length) && !loading">
+			No search results found for "{{query_display}}"!
+			<br >
+			<br >
+			Suggestions:
+			<br >
+			<ul>
+				<li>Try searching the movie from the advanced search section.</li>
+				<li>Try searching by movie genre in the browse by genre section.</li>
+				<li>Search for a different movie.</li>
+			</ul>
+		</div>
+		
+		<!-- Actual output of movie data -->
+		<section class="col-xs-12 col-sm-6 col-md-12" ng-show="data && data.length">
+		
+			<!-- For search preferences (eg. sorting, result limits) -->
+			<nav class="navbar navbar-default">
+				<div class="navbar-collapse collapse">
+					<ul class="nav navbar-nav navbar-left">
+						<li class="dropdown">
+					        <a class="btn btn-seconary dropdown-toggle" data-toggle="dropdown" ui-sref="#"><u>Sort by</u>: {{order_by.charAt(0).toUpperCase() + order_by.slice(1)}}
+					        <span class="caret"></span></a>
+					        <ul class="dropdown-menu">
+								<li><a style="cursor: pointer;" ng-click="adjustOrderBySorting(TITLE_COLUMN)">{{TITLE_COLUMN}}</a></li>
+								<li><a style="cursor: pointer;" ng-click="adjustOrderBySorting(YEAR_COLUMN)">{{YEAR_COLUMN}}</a></li>
+					        </ul>
+						</li>
+					</ul>
+				</div>
+			</nav>
+		
+			<article class="search-result row" ng-repeat="movie in data">
+				<div class="col-xs-12 col-sm-12 col-md-3">
+					<a ui-sref="#" title="{{movie.title}}" class="thumbnail" style="cursor: pointer;">
+						<img src="{{movie.movie_banner_url}}" alt="Lorem ipsum" />
+					</a>
+				</div>
+				<div class="col-xs-12 col-sm-12 col-md-6 excerpet">
+					<h3><a ui-sref="#" style="cursor: pointer;">{{movie.movie_title}}</a></h3>
+					<ul class="meta-search list-unstyled">
+						<li><h5>
+							<i class="glyphicon glyphicon-search"></i> 
+							ID: <span class="label label-info">{{movie.movie_id}}</span>
+						</h5></li>
+						<li><h5>
+							<i class="glyphicon glyphicon-calendar"></i> 
+							Year Released: <span class="label label-info">{{movie.movie_year}}</span>
+						</h5></li>
+						<li><h5>
+							<i class="glyphicon glyphicon-film"></i> 
+							Director: <span class="label label-info">{{movie.movie_director}}</span>
+						</h5></li>
+						<li><h5>
+							<i class="glyphicon glyphicon-tag"></i> 
+							Genre(s): 
+							<ul class="list-unstyled list-inline" style="display: inline-block;">
+								<li ng-repeat="genre in movie.movie_genres"><span class="label label-info">{{genre}}</span></li>
+							</ul>
+						</h5></li>
+						<li><h5>
+							<i class="glyphicon glyphicon-user"></i> 
+							Star(s): 
+							<ul class="list-unstyled list-inline" style="display: inline-block;">
+								<li ng-repeat="star in movie.movie_stars" style="margin-bottom:0.5em; margin-top:0.5em; cursor: pointer;">
+									<span class="label label-info btn btn-primary">{{star.star_first_name + " " + star.star_last_name}}</span>
+								</li>
+							</ul>
+						</h5></li>
+					</ul>
+				</div>
+				<span class="clearfix borda"></span>
+				<hr />
+			</article>
+		</section>
+</div>
