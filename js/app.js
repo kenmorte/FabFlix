@@ -39,7 +39,7 @@
 				params: {userData: null}
 			})
 			.state('results', {
-				url : '/results?query_type={}&starts_with={}order_by={}order_type={}offset={}limit={}',
+				url : '/results?query_type={}starts_with={}order_type={}order_by={}offset={}limit={}',
 				templateUrl : 'html/results.html',
 				controller : 'ResultsController',
 				params: {
@@ -122,13 +122,22 @@
 		$scope.query_display = $stateParams.query_display;
 		$scope.order_by = $stateParams.order_by;
 		$scope.order_type = $stateParams.order_type;
-		$scope.offset = $stateParams.offset;
+		$scope.offset = Number($stateParams.offset);
 		$scope.limit = $stateParams.limit;
 		$scope.starts_with = $stateParams.starts_with;
 		
 		$scope.loading = true;
 		$scope.TITLE_COLUMN = "Title";
 		$scope.YEAR_COLUMN = "Year";
+		
+		$scope.LIMIT_10 = 10;
+		$scope.LIMIT_25 = 25;
+		$scope.LIMIT_50 = 50;
+		$scope.LIMIT_100 = 100;
+		
+		$scope.display_order_type = $scope.order_type == "asc" ? "Ascending" : "Descending";
+		$scope.ASCENDING_OPTION = {display: "Ascending", value: "asc"};
+		$scope.DESCENDING_OPTION = {display: "Descending", value: "desc"};
 		
 		if ($stateParams.query_type == "BROWSE_BY_MOVIE_TITLE") {
 			SearchService.browseByMovieTitle($http, 
@@ -137,11 +146,35 @@
 					$stateParams.offset, $stateParams.limit)
 				.then(function(data) {
 					if (data) {
-						$scope.data = data;
+						console.log(data);
+						$scope.data = data.movie_data;
+						$scope.number_of_results = Number(data.number_of_results);
+						
+						$scope.previousButtonStyle = {cursor: 'pointer'};
+						$scope.nextButtonStyle = {cursor: 'pointer'};
+						
+						$scope.previousButtonDisabled = $scope.offset <= 0;
+						$scope.nextButtonDisabled = $scope.offset + $scope.data.length >= $scope.number_of_results;
+						
+						if ($scope.previousButtonDisabled) {
+							angular.element( document.querySelector( '#previousButton' ) )
+								.addClass('disabled');
+							$scope.previousButtonStyle.cursor = 'default';
+						}
+						if ($scope.nextButtonDisabled) {
+							angular.element( document.querySelector( '#nextButton' ) )
+								.addClass('disabled');
+							$scope.nextButtonStyle.cursor = 'default';
+						}
+						
+						
+						var currentPage = Math.floor($scope.number_of_results/$scope.limit) + 1;
+						$scope.paginations = []
 					} else {
 						$scope.data = null;
+						$scope.number_of_results = 0;
 					}
-				$scope.loading = false;
+					$scope.loading = false;
 				}
 			);
 		}
@@ -154,6 +187,66 @@
 				order_by: new_order_by_sorting,
 				order_type: $scope.order_type,
 				offset: $scope.offset,
+				limit: $scope.limit,
+				query_display: $scope.query_display
+			});
+		}
+		
+		$scope.adjustOrderBySortingType = function(new_sort_type) {
+			$state.go('results', {
+				userData: $scope.userData,
+				query_type: $scope.query_type,
+				starts_with: $scope.starts_with,
+				order_by: $scope.order_by,
+				order_type: new_sort_type,
+				offset: $scope.offset,
+				limit: $scope.limit,
+				query_display: $scope.query_display
+			});
+		}
+		
+		$scope.adjustSearchLimit = function(new_limit) {
+			$state.go('results', {
+				userData: $scope.userData,
+				query_type: $scope.query_type,
+				starts_with: $scope.starts_with,
+				order_by: $scope.order_by,
+				order_type: $scope.order_type,
+				offset: $scope.offset,
+				limit: new_limit,
+				query_display: $scope.query_display
+			});
+		}
+		
+		$scope.getNextResults = function() {
+			if ($scope.nextButtonDisabled)
+				return;
+			
+			var newOffset = Number($scope.offset) + Number($scope.limit);
+			$state.go('results', {
+				userData: $scope.userData,
+				query_type: $scope.query_type,
+				starts_with: $scope.starts_with,
+				order_by: $scope.order_by,
+				order_type: $scope.order_type,
+				offset: newOffset,
+				limit: $scope.limit,
+				query_display: $scope.query_display
+			});
+		}
+		
+		$scope.getPreviousResults = function() {
+			if ($scope.previousButtonDisabled)
+				return;
+			
+			var newOffset = Number($scope.offset) - Number($scope.limit);
+			$state.go('results', {
+				userData: $scope.userData,
+				query_type: $scope.query_type,
+				starts_with: $scope.starts_with,
+				order_by: $scope.order_by,
+				order_type: $scope.order_type,
+				offset: newOffset,
 				limit: $scope.limit,
 				query_display: $scope.query_display
 			});

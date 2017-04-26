@@ -76,6 +76,29 @@
 								<li><a style="cursor: pointer;" ng-click="adjustOrderBySorting(YEAR_COLUMN)">{{YEAR_COLUMN}}</a></li>
 					        </ul>
 						</li>
+						<li class="dropdown">
+					        <a class="btn btn-seconary dropdown-toggle" data-toggle="dropdown" ui-sref="#"><u>Sort type</u>: {{display_order_type}}
+					        <span class="caret"></span></a>
+					        <ul class="dropdown-menu">
+								<li><a style="cursor: pointer;" ng-click="adjustOrderBySortingType(ASCENDING_OPTION.value)">{{ASCENDING_OPTION.display}}</a></li>
+								<li><a style="cursor: pointer;" ng-click="adjustOrderBySortingType(DESCENDING_OPTION.value)">{{DESCENDING_OPTION.display}}</a></li>
+					        </ul>
+						</li>
+						<li class="dropdown">
+					        <a class="btn btn-seconary dropdown-toggle" data-toggle="dropdown" ui-sref="#"><u>Limit</u>: {{limit}} results per page
+					        <span class="caret"></span></a>
+					        <ul class="dropdown-menu">
+								<li><a style="cursor: pointer;" ng-click="adjustSearchLimit(LIMIT_10)">{{LIMIT_10}}</a></li>
+								<li><a style="cursor: pointer;" ng-click="adjustSearchLimit(LIMIT_25)">{{LIMIT_25}}</a></li>
+								<li><a style="cursor: pointer;" ng-click="adjustSearchLimit(LIMIT_50)">{{LIMIT_50}}</a></li>
+								<li><a style="cursor: pointer;" ng-click="adjustSearchLimit(LIMIT_100)">{{LIMIT_100}}</a></li>
+					        </ul>
+						</li>
+					</ul>
+					<ul class="nav navbar-nav navbar-right">
+					    <span class="navbar-text">
+							Displaying results {{offset+1}}-{{offset+data.length}} out of {{number_of_results}}
+					    </span>
 					</ul>
 				</div>
 			</nav>
@@ -83,7 +106,7 @@
 			<article class="search-result row" ng-repeat="movie in data">
 				<div class="col-xs-12 col-sm-12 col-md-3">
 					<a ui-sref="#" title="{{movie.title}}" class="thumbnail" style="cursor: pointer;">
-						<img src="{{movie.movie_banner_url}}" alt="Lorem ipsum" />
+						<img src="{{movie.movie_banner_url}}" alt="{{movie.movie_title}}" />
 					</a>
 				</div>
 				<div class="col-xs-12 col-sm-12 col-md-6 excerpet">
@@ -123,4 +146,12 @@
 				<hr />
 			</article>
 		</section>
+		
+		<!-- Previous/next buttons -->
+		<nav style="text-align: center;" ng-show="data && data.length">
+		  <ul class="pagination pagination-lg" style="display: inline-block;">
+		    <li id="previousButton" class="page-item"><a class="page-link" ui-sref="#" ng-style="previousButtonStyle" ng-click="getPreviousResults()">Previous</a></li>
+		    <li id="nextButton" class="page-item"><a class="page-link" ui-sref="#" ng-style="nextButtonStyle" ng-click="getNextResults()">Next</a></li>
+		  </ul>
+		</nav>
 </div>

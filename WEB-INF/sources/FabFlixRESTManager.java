@@ -127,7 +127,9 @@ public class FabFlixRESTManager
 	 * Otherwise, the list contains JSONObjects of resulting movies.
 	 * 
 	 * JSON Format:
-	 * [
+	 * {
+	 * 	number_of_results: number of total results from the query (not affected by limit)
+	 * 	movie_data:	[
 	 * 		{
 	 * 			"movie_id": id of the first movie,
 	 * 			"movie_title": title of the first movie (should be hyper-linked in HTML),
@@ -136,33 +138,34 @@ public class FabFlixRESTManager
 	 * 			"movie_banner_url": URL of the first movie's banner,
 	 * 			"movie_trailer_url": URL of the first movie's trailer,
 	 * 			"movie_genres": [
-	 * 								genre1,
-	 * 								genre2,
-	 * 								...
-	 * 							],
+	 * 				genre1,
+	 * 				genre2,
+	 * 				...
+	 * 			],
 	 * 			"movie_stars": [
-	 * 								{
-	 * 									"star_id": id of the first movie's first star,
-	 * 									"star_first_name": first name of the first movie's first star,
-	 * 									"star_last_name": last name of the first movie's first star
-	 * 								},
-	 * 								{
-	 * 									"star_id": id of the first movie's second star,
-	 * 									"star_first_name": first name of the first movie's second star,
-	 * 									"star_last_name": last name of the first movie's second star
-	 * 								},
-	 * 								...
-	 * 							]
+	 *					{
+	 * 						"star_id": id of the first movie's first star,
+	 * 						"star_first_name": first name of the first movie's first star,
+	 * 						"star_last_name": last name of the first movie's first star
+	 * 					},
+	 * 					{
+	 * 						"star_id": id of the first movie's second star,
+	 * 						"star_first_name": first name of the first movie's second star,
+	 * 						"star_last_name": last name of the first movie's second star
+	 * 					},
+	 * 					...
+	 * 			]
 	 * 		},
 	 *		...
-	 * ]
+	 * 	]
+	 * }
 	 * 
 	 * @param character	character that the movie titles start with
 	 * @param orderColumn the column to order the resulting list by (should be either "title" or "year")
 	 * @param orderType	either "desc" for descending or "asc" for ascending
 	 * @return	JSON array containing the format above for movies starting with a specified character
 	 */
-	public JSONArray getMoviesByFirstCharacter(String character, 
+	public JSONObject getMoviesByFirstCharacter(String character, 
 		String orderColumn, String orderType, 
 		String offset, String limit) throws SQLException, JSONException {
 		if (character == null) {
@@ -183,20 +186,34 @@ public class FabFlixRESTManager
 			limit = DATABASE_DEFAULT_LIMIT;
 		
 		
-		Statement select;
+		Statement select, nMoviesSelect;
 		PreparedStatement genreStatement, starsStatement;
-		ResultSet movieResult, genreResult, starsResult;
-		JSONArray resultJSONArray, genresJSONArray, starsJSONArray;
-		JSONObject movieJSON, starJSON;
+		ResultSet movieResult, genreResult, starsResult, nMoviesResult;
+		JSONArray movieDataJSONArray, genresJSONArray, starsJSONArray;
+		JSONObject movieJSON, starJSON, resultJSON;
 		
 		orderColumn = (orderColumn == null) ? "title" : orderColumn.equalsIgnoreCase("year") ? "year" : "title";
 		orderType = (orderType == null || orderType.equalsIgnoreCase("desc")) ? "desc" : "asc";
 		select = mDatabase.createStatement();
+		nMoviesSelect = mDatabase.createStatement();
 		// Replace ? with the movie ID
 		genreStatement = mDatabase.prepareStatement("select g.name from genres g, genres_in_movies gm where gm.movie_id = ? and gm.genre_id = g.id;");
 		starsStatement = mDatabase.prepareStatement("select s.id, s.first_name,s.last_name from stars s, stars_in_movies sm where sm.movie_id = ? and sm.star_id = s.id;");
-		movieResult = select.executeQuery("select * from movies where title like \"" + character + "%\" order by " + orderColumn + " limit " + limit + " offset " + offset);
-		resultJSONArray = new JSONArray();
+		movieResult = select.executeQuery("select * from movies where title like \"" + 
+				character + "%\" order by " + 
+				orderColumn + " " + 
+				orderType + " limit " + 
+				limit + " offset " + 
+				offset);
+		nMoviesResult = nMoviesSelect.executeQuery("select count(*) from movies where title like \"" + character +  "%\"");
+		resultJSON = new JSONObject();
+		movieDataJSONArray = new JSONArray();
+		
+		// Get the number of resulting movies from the database
+		if (nMoviesResult.next())
+			resultJSON.put("number_of_results", nMoviesResult.getInt(1));
+		else
+			resultJSON.put("number_of_results", 0);
 		
 		// Collect all the movies from the database
 		while (movieResult.next()) {
@@ -233,9 +250,10 @@ public class FabFlixRESTManager
 			movieJSON.put("movie_genres", genresJSONArray);
 			movieJSON.put("movie_stars", starsJSONArray);
 			
-			resultJSONArray.put(movieJSON);
+			movieDataJSONArray.put(movieJSON);
 		}
-		return resultJSONArray;
+		resultJSON.put("movie_data", movieDataJSONArray);
+		return resultJSON;
 	}
 	
 	/**

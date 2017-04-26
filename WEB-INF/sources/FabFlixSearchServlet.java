@@ -36,7 +36,7 @@ public class FabFlixSearchServlet extends HttpServlet {
     	String character = request.getParameter("starts_with");
     	
     	StringWriter out = new StringWriter();
-    	JSONArray result = new JSONArray();
+    	JSONObject result = new JSONObject();
     	FabFlixRESTManager restManager;
     	
     	response.setContentType("text/html");
