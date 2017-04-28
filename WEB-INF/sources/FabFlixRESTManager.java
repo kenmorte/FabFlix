@@ -1,5 +1,6 @@
 import java.io.StringWriter;
 import java.sql.*;
+import java.util.HashMap;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -194,8 +195,10 @@ public class FabFlixRESTManager
 		JSONArray movieDataJSONArray, genresJSONArray, starsJSONArray;
 		JSONObject movieJSON, starJSON, resultJSON;
 		
-		orderColumn = (orderColumn == null) ? "title" : orderColumn.equalsIgnoreCase("year") ? "year" : "title";
-		orderType = (orderType == null || orderType.equalsIgnoreCase("desc")) ? "desc" : "asc";
+		// Use the default order column/type
+		orderColumn = orderColumn.equalsIgnoreCase("year") ? "year" : DATABASE_DEFAULT_ORDER_COLUMN;
+		orderType = orderType.equalsIgnoreCase("desc") ? "desc" : DATABASE_DEFAULT_ORDER_TYPE;
+		
 		select = mDatabase.createStatement();
 		nMoviesSelect = mDatabase.createStatement();
 		// Replace ? with the movie ID
@@ -307,6 +310,110 @@ public class FabFlixRESTManager
 			resultJSON.put("number_of_results", nMoviesResult.getInt(1));
 		else
 			resultJSON.put("number_of_results", 0);
+		
+		// Collect all the movies from the database
+		while (movieResult.next()) {
+			Integer movieID = movieResult.getInt(1);
+			genresJSONArray = new JSONArray();
+			starsJSONArray = new JSONArray();
+			movieJSON = new JSONObject();
+			
+			// Collect all the genres associated with the current movie
+			genreStatement.setInt(1, movieID);
+			genreResult = genreStatement.executeQuery();
+			while (genreResult.next()) {
+				genresJSONArray.put(genreResult.getString(1));
+			}
+			
+			// Collect all the stars associated with the current movie
+			starsStatement.setInt(1, movieID);
+			starsResult = starsStatement.executeQuery();
+			while (starsResult.next()) {
+				starJSON = new JSONObject();
+				starJSON.put("star_id", starsResult.getInt(1));
+				starJSON.put("star_first_name", starsResult.getString(2));
+				starJSON.put("star_last_name", starsResult.getString(3));
+				starsJSONArray.put(starJSON);
+			}
+			
+			// Put all the elements inside our resulting movie JSON
+			movieJSON.put("movie_id", movieID);
+			movieJSON.put("movie_title", movieResult.getString(2));
+			movieJSON.put("movie_year", movieResult.getInt(3));
+			movieJSON.put("movie_director", movieResult.getString(4));
+			movieJSON.put("movie_banner_url", movieResult.getString(5));
+			movieJSON.put("movie_trailer_url", movieResult.getString(6));
+			movieJSON.put("movie_genres", genresJSONArray);
+			movieJSON.put("movie_stars", starsJSONArray);
+			
+			movieDataJSONArray.put(movieJSON);
+		}
+		resultJSON.put("movie_data", movieDataJSONArray);
+		return resultJSON;
+	}
+	
+	/**
+	 * Retrieves a JSON object of movies given various query parameters.
+	 * If no movies were found, then the corresponding JSON array is an empty list.
+	 * Otherwise, the list contains JSONObjects of resulting movies.
+	 * 
+	 * @param title	title parameter for a movie
+	 * @param year	year parameter for when movie is released
+	 * @param director	director parameter for movie
+	 * @param starFirstName	first name parameter for a star in a movie
+	 * @param starLastName	last name parameter for a star in a movie
+	 * @param orderColumn the column to order the resulting list by (should be either "title" or "year")
+	 * @param orderType either "desc" for descending or "asc" for ascending
+	 * @param offset starting point from the resulting rows in the table
+	 * @param limit number of results limited to display
+	 * @return	JSON array containing the format above for movies with given parameters
+	 * @throws SQLException if there was an error parsing the SQL command
+	 * @throws JSONException if there was an error parsing the JSON object
+	 */
+	public JSONObject getMoviesByParameters(String title, String year, String director, 
+		String starFirstName, String starLastName, 
+		String orderColumn, String orderType, 
+		String offset, String limit) throws SQLException, JSONException {
+		
+		if (orderColumn == null)
+			orderColumn = DATABASE_DEFAULT_ORDER_COLUMN;
+		if (orderType == null)
+			orderType = DATABASE_DEFAULT_ORDER_TYPE;
+		if (offset == null)
+			offset = DATABASE_DEFAULT_OFFSET;
+		if (limit == null)
+			limit = DATABASE_DEFAULT_LIMIT;
+		
+		Statement select, nMoviesSelect;
+		PreparedStatement genreStatement, starsStatement;
+		ResultSet movieResult, genreResult, starsResult, nMoviesResult;
+		JSONArray movieDataJSONArray, genresJSONArray, starsJSONArray;
+		JSONObject movieJSON, starJSON, resultJSON;
+		
+		// Use the default order column/type
+		orderColumn = orderColumn.equalsIgnoreCase("year") ? "year" : DATABASE_DEFAULT_ORDER_COLUMN;
+		orderType = orderType.equalsIgnoreCase("desc") ? "desc" : DATABASE_DEFAULT_ORDER_TYPE;
+		
+		select = mDatabase.createStatement();
+		nMoviesSelect = mDatabase.createStatement();
+		// Replace ? with the movie ID
+		genreStatement = mDatabase.prepareStatement("select g.name from genres g, genres_in_movies gm where gm.movie_id = ? and gm.genre_id = g.id;");
+		starsStatement = mDatabase.prepareStatement("select s.id, s.first_name,s.last_name from stars s, stars_in_movies sm where sm.movie_id = ? and sm.star_id = s.id;");
+		movieResult = select.executeQuery(
+			"select distinct m.* from stars s, stars_in_movies sm, movies m " 
+			+ getSubstringMatchingWhereClause(title, year, director, starFirstName, starLastName)
+			+ " order by " + orderColumn 
+			+ " " + orderType 
+			+ " limit " + limit 
+			+ " offset " + offset
+		);
+		nMoviesResult = nMoviesSelect.executeQuery("select distinct m.* from stars s, stars_in_movies sm, movies m " + getSubstringMatchingWhereClause(title, year, director, starFirstName, starLastName));
+		resultJSON = new JSONObject();
+		movieDataJSONArray = new JSONArray();
+		
+		// Get the number of resulting movies from the database
+		nMoviesResult.last();
+		resultJSON.put("number_of_results", nMoviesResult.getRow());
 		
 		// Collect all the movies from the database
 		while (movieResult.next()) {
@@ -504,6 +611,41 @@ public class FabFlixRESTManager
 			starJSON.put("star_movies", movieJSONArray);
 		}
 		return starJSON;
+	}
+	
+	/**
+	 * Gets the where clause for substring matching given the following parameters.
+	 * If all the parameters are null, then the output is an empty string.
+	 * 
+	 * @param title	title parameter for a movie
+	 * @param year	year parameter for when movie is released
+	 * @param director	director parameter for movie
+	 * @param starFirstName	first name parameter for a star in a movie
+	 * @param starLastName	last name parameter for a star in a movie
+	 * @return	where clause for substring matching in a movie query
+	 */
+	private String getSubstringMatchingWhereClause(String title, String year, String director, 
+		String starFirstName, String starLastName) {
+		HashMap<String,String> map = new HashMap<>();
+		String result = " where s.id = sm.star_id and m.id = sm.movie_id ";
+		
+		if (title != null)
+			map.put("m.title", title);
+		if (year != null)
+			map.put("m.year", year);
+		if (director != null)
+			map.put("m.director", director);
+		if (starFirstName != null)
+			map.put("s.first_name", starFirstName);
+		if (starLastName != null)
+			map.put("s.last_name", starLastName);
+		
+		if (!map.keySet().isEmpty()) {
+			for (String column : map.keySet()) {
+				result += " and " + column + " like \"%" + map.get(column) + "%\"";
+			}
+		}
+		return result;
 	}
 	
 	/**

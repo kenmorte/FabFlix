@@ -1,4 +1,5 @@
 (function() {
+	// Initialize our app module
 	var app = angular.module('FabFlix', ['ui.router']);
   
   // http://stackoverflow.com/questions/19254029/angularjs-http-post-does-not-send-data/35699599
@@ -7,7 +8,8 @@
 			$httpProvider.defaults.transformRequest.unshift($httpParamSerializerJQLikeProvider.$get());
 			$httpProvider.defaults.headers.post['Content-Type'] = 'application/x-www-form-urlencoded; charset=utf-8';
 	});
-  
+	
+	// Initializing our app (rootScope)
 	app.run(function($rootScope, $location, $state, LoginService) {
 		$rootScope.$on('$stateChangeStart', 
 			function(event, toState, toParams, fromState, fromParams){ 
@@ -15,7 +17,7 @@
 			}
 		);
 		
-		$rootScope.offset = 0;	// by default, we look at the first search reuslts from the home controller
+		$rootScope.offset = 0;	// by default, we look at the first search results from the home controller
 		$rootScope.limit = 10;	// by default, we limit the search results to 10 per page from the home controller
 			
 		if(!LoginService.isAuthenticated()) {
@@ -39,7 +41,7 @@
 				params: {userData: null}
 			})
 			.state('results', {
-				url : '/results?query_type={}genre={}starts_with={}order_type={}order_by={}offset={}limit={}',
+				url : '/results?query_type={}title={}year={}director={}starFirstName={}starLastName={}genre={}starts_with={}order_type={}order_by={}offset={}limit={}',
 				templateUrl : 'html/results.html',
 				controller : 'ResultsController',
 				params: {
@@ -48,6 +50,11 @@
 					query_type: null,
 					starts_with: null,
 					genre: null,
+					title: null,
+					year: null,
+					director: null,
+					starFirstName: null,
+					starLastName: null,
 					order_by: null,
 					order_type: null,
 					offset: null,
@@ -79,6 +86,7 @@
 		$rootScope.title = "FabFlix Login";
 		$scope.loggingIn = false;
 
+		// Called after user attempts to log in
 		$scope.formSubmit = function() {
 			$scope.loggingIn = true;
   
@@ -113,6 +121,35 @@
 		                    "Horror", "Indie", "James Bond", "Music", "Musical", "Musical/Performing Arts", "Mystery", 
 		                    "Roman", "Romance", "Sci-Fi", "Sport", "Spy", "Suspense", "Thriller", "War"];
 		$scope.charList = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+		$scope.showError = false;
+		
+		$scope.searchSubmit = function() {
+			$scope.showError = !$scope.movieTitle && !$scope.year 
+				&& !$scope.director 
+				&& !$scope.starFirstName && !$scope.starLastName;
+			
+			if (!$scope.showError) {
+				$state.go('results', {
+					userData: $scope.userData,
+					query_type: "BROWSE_BY_PARAMETERS",
+					title: $scope.movieTitle,
+					year: $scope.year,
+					director: $scope.director,
+					starFirstName: $scope.starFirstName,
+					starLastName: $scope.starLastName,
+					order_by: "title",	// by default
+					order_type: "asc",	// by default
+					offset: $rootScope.offset,
+					limit: $rootScope.limit,
+					query_display: "Movies " + // IMPORTANT: For displaying proper response when no results found!
+						(!$scope.movieTitle ? "" : "with title '" + $scope.movieTitle + "'") + 
+						(!$scope.year ? "" : " with year '" + $scope.year + "'") + 
+						(!$scope.director ? "" : " with director '" + $scope.director + "'") + 
+						(!$scope.starFirstName ? "" : " with star's first name '" + $scope.starFirstName + "'") + 
+						(!$scope.starLastName ? "" : " with star's last name '" + $scope.starLastName + "'")
+				});
+			}
+		}
 		
 		/**
 		 * Get search results for movies by first character in movie title
@@ -171,8 +208,18 @@
 		$scope.order_type = $stateParams.order_type;
 		$scope.offset = Number($stateParams.offset);
 		$scope.limit = $stateParams.limit;
+		
+		// Get parameters for browsing by first character in title
 		$scope.starts_with = $stateParams.starts_with;
+		
+		// Get parameters for browsing by genre
 		$scope.genre = $stateParams.genre;
+		
+		$scope.title = $stateParams.title;
+		$scope.year = $stateParams.year;
+		$scope.director = $stateParams.director;
+		$scope.starFirstName = $stateParams.starFirstName;
+		$scope.starLastName = $stateParams.starLastName;
 		
 		$scope.TITLE_COLUMN = "Title";
 		$scope.YEAR_COLUMN = "Year";
@@ -193,6 +240,13 @@
 					$scope.offset, $scope.limit)
 				.then(function(data) {
 					if (data) {
+						if (data.error) {
+							$scope.error = data.error;
+							$scope.errorMessage = data.message;
+							$scope.loading = false;
+							return;
+						}
+						
 						$scope.data = data.movie_data;
 						$scope.number_of_results = Number(data.number_of_results);
 						
@@ -225,15 +279,58 @@
 					$scope.genre, 
 					$scope.order_by, $scope.order_type,
 					$scope.offset, $scope.limit)
-				.then(function(data) {
-					if (data.error) {
-						$scope.error = data.error;
-						$scope.errorMessage = data.message;
-						$scope.loading = false;
-						return;
-					}
-					
+				.then(function(data) {		
 					if (data) {
+						if (data.error) {
+							$scope.error = data.error;
+							$scope.errorMessage = data.message;
+							$scope.loading = false;
+							return;
+						}
+						
+						$scope.data = data.movie_data;
+						$scope.number_of_results = Number(data.number_of_results);
+						
+						$scope.previousButtonStyle = {cursor: 'pointer'};
+						$scope.nextButtonStyle = {cursor: 'pointer'};
+						
+						$scope.previousButtonDisabled = $scope.offset <= 0;
+						$scope.nextButtonDisabled = $scope.offset + $scope.data.length >= $scope.number_of_results;
+						
+						if ($scope.previousButtonDisabled) {
+							angular.element( document.querySelector( '#previousButton' ) )
+								.addClass('disabled');
+							$scope.previousButtonStyle.cursor = 'default';
+						}
+						if ($scope.nextButtonDisabled) {
+							angular.element( document.querySelector( '#nextButton' ) )
+								.addClass('disabled');
+							$scope.nextButtonStyle.cursor = 'default';
+						}
+					} else {
+						$scope.data = null;
+						$scope.number_of_results = 0;
+					}
+					$scope.loading = false;
+				}
+			);
+		}
+		if ($stateParams.query_type == "BROWSE_BY_PARAMETERS") {
+			SearchService.searchByMovieParameters($http, 
+					$scope.title,
+					$scope.year,
+					$scope.director,
+					$scope.starFirstName, $scope.starLastName,
+					$scope.order_by, $scope.order_type, $scope.offset, $scope.limit)
+				.then(function(data) {		
+					if (data) {
+						if (data.error) {
+							$scope.error = data.error;
+							$scope.errorMessage = data.message;
+							$scope.loading = false;
+							return;
+						}
+						
 						$scope.data = data.movie_data;
 						$scope.number_of_results = Number(data.number_of_results);
 						
@@ -499,7 +596,34 @@
   
 	app.factory('SearchService', function() {
 		return {
-			browseByMovieTitle : function($http, char, order_by, order_type, offset, limit) {
+			searchByMovieParameters: function($http, title, year, director, 
+					starFirstName, starLastName, 
+					order_by, order_type, offset, limit ) {
+				// HTTP GET runs asnychronously
+				return $http({
+					method: 'GET',
+					url: 'http://localhost:8080/FabFlix/servlet/FabFlixSearchServlet',	
+					params: { 
+						query_type: "BROWSE_BY_PARAMETERS",
+						title: title,
+						year: year,
+						director: director,
+						starFirstName: starFirstName,
+						starLastName: starLastName,
+						order_by: order_by,
+						order_type: order_type,
+						offset: offset,
+						limit: limit
+					}
+				// IMPORTANT: query_type parameter determines the type of GET operation to use!
+				}).then(function successCallback(response) {
+					return response.data;
+				}, function errorCallback(response) {
+					return null;
+				});
+			},
+			
+			browseByMovieTitle: function($http, char, order_by, order_type, offset, limit) {
 				// HTTP GET runs asnychronously
 				return $http({
 					method: 'GET',

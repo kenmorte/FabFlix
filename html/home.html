@@ -40,34 +40,35 @@
 	<div class="container-fluid">
 		<h3>Search For Movies</h3>
 		
-		<form name="searchForm" id='searchForm' class="form-group">
+		<form class="form" ng-submit="searchSubmit()" ng-keypress="($event.which === 13)?searchSubmit():0">
 			<div class="form-group">
 				<label for="titleInput"><b>Title</b></label>
-				<input type="text" class="form-control" id="titleInput" placeholder="e.g. 'The Godfather'">
+				<input ng-model="movieTitle" type="text" class="form-control" placeholder="e.g. 'The Godfather'">
 			</div>
 			
 			<div class="form-group">
 				<label for="yearInput"><b>Year</b></label>
-				<input type="number" class="form-control" id="yearInput" placeholder="e.g. '1972'">
+				<input ng-model="year" type="number" class="form-control" placeholder="e.g. '1972'">
 			</div>
 			
 			<div class="form-group">
 				<label for="directorInput"><b>Director</b></label>
-				<input type="text" class="form-control" id="directorInput" placeholder="e.g. 'Francis Ford Coppola'">
+				<input ng-model="director" type="text" class="form-control" placeholder="e.g. 'Francis Ford Coppola'">
 			</div>
 			
 			<div class="form-group">
 				<label for="starFirstName"><b>Star First Name</b></label>
-				<input type="text" class="form-control" id="starFirstName" placeholder="e.g. 'Marlon'">
+				<input ng-model="starFirstName" type="text" class="form-control"  placeholder="e.g. 'Marlon'">
 			</div>
 			
 			<div class="form-group">
 				<label for="starLastName"><b>Star Last Name</b></label>
-				<input type="text" class="form-control" id="starLastName" placeholder="e.g. 'Brando'">
+				<input ng-model="starLastName" type="text" class="form-control" placeholder="e.g. 'Brando'">
 			</div>
 			
 			<div class="form-group">
-				<button class="btn btn-primary" type="button">Search</button>
+				<button class="btn btn-primary" type="button" ng-click="searchSubmit()">Search</button>
+				<span class="text-danger" ng-show="showError">You must have at least one field filled.</span>
 			</div>
 		</form>
 		<hr />
