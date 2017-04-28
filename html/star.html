@@ -1,0 +1,97 @@
+<div class="container-fluid">
+	<nav class="navbar navbar-default">
+		<div class="navbar-header">
+			<button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+				<span class="icon-bar"></span>
+				<span class="icon-bar"></span>
+				<span class="icon-bar"></span>
+			</button>    
+		</div>
+		<a class="navbar-brand" href="#">FabFlix</a>
+			
+		<div class="container-fluid">
+			<!-- Collect the nav links, forms, and other content for toggling -->
+			<div class="navbar-collapse collapse">
+				<ul class="nav navbar-nav navbar-left">
+			    	<li>
+			    		<a ui-sref="home"><span class="glyphicon glyphicon-home"></span>
+			    			Home
+			    		</a>
+			    	</li>
+			    	<li>
+			    		<a ui-sref="home">
+			    			<span class="glyphicon glyphicon-shopping-cart"></span>
+			    			Shopping Cart
+			    		</a>
+			    	</li>
+				</ul>
+			    <ul class="nav navbar-nav navbar-right">
+			    	<li>
+			    		<a ui-sref="login">
+			    			<span class="glyphicon glyphicon-log-out"></span>
+			    			Logout
+			    		</a>
+			    	</li>
+			    </ul>
+			</div>
+		</div>
+	</nav>
+	
+	<div class="container">
+		<!-- Loading animation while page is loading -->
+		<div ng-show="loading" class="text-center">
+			<i class="fa fa-spinner fa-spin fa-3x fa-fw"></i>
+		</div>
+		
+		<div class="container-fluid" ng-show="!loading" style="margin-bottom: 1em;">
+			<button type="button" class="btn btn-primary" ng-click="backClicked()">
+				<span class="glyphicon glyphicon-chevron-left"></span>
+				Return to Previous Screen
+			</button>
+		</div>
+
+		
+		<!-- Error message shown with invalid movie ID -->
+		<div class="container-fluid" ng-show="!loading && starData.error">
+			<div class="col-md-6 col-md-offset-3 alert alert-danger">
+				No star found with ID <strong>{{starId}}</strong>!
+			</div>
+		</div>
+		
+		<div class="contrainer-fluid" ng-show="!loading && !starData.error">
+			<article class="search-result row">
+				<div class="col-xs-12 col-sm-12 col-md-3">
+					<a title="{{starData.star_first_name}} {{starData.star_last_name}}" class="thumbnail" style="cursor: pointer;">
+						<img src="{{starData.star_photo_url}}" alt="{{starData.star_first_name}} {{starData.star_last_name}}" />
+					</a>
+				</div>
+				<div class="col-xs-12 col-sm-12 col-md-6 excerpet">
+					<h2>{{starData.star_first_name}} {{starData.star_last_name}}</h2>
+					
+					<ul class="meta-search list-unstyled">
+						<li><h5>
+							<i class="glyphicon glyphicon-search"></i> 
+							Star ID: {{starData.star_id}}
+						</h5></li>
+						<li><h5>
+							<i class="glyphicon glyphicon-calendar"></i> 
+							Date of Birth: <span class="label label-info">{{starData.star_dob}}</span>
+						</h5></li>
+						<li><h5>
+							<i class="glyphicon glyphicon-tag"></i> 
+							Movie(s): 
+							<ul class="list-unstyled list-inline" style="display: inline-block;">
+								<li ng-repeat="movie in starData.star_movies" style="margin-bottom:0.5em; margin-top:0.5em; cursor: pointer;">
+									<span class="label label-info btn btn-primary" ng-click="onMovieClick(movie.movie_id)">
+										{{movie.movie_title}} ({{movie.movie_year}})
+									</span>
+								</li>
+							</ul>
+						</h5></li>
+					</ul>
+				</div>
+			</article>
+		</div>
+		
+	</div>
+</div>

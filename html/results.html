@@ -39,7 +39,7 @@
 	
 	
 	<div class="container">
-		<h3>Search Results</h3>
+		<h3>Search Results: {{query_display}}</h3>
 		<hr />
 		
 		<!-- Loading animation while page is loading -->
@@ -47,8 +47,14 @@
 			<i class="fa fa-spinner fa-spin fa-3x fa-fw"></i>
 		</div>
 		
+		<div class="container-fluid"  ng-show="data.error">
+			<div class="col-md-6 col-md-offset-3 alert alert-danger">
+				<strong>{{error}}</strong>: {{errorMessage}}.
+			</div>
+		</div>
+		
 		<!-- No results screen if no results were found -->
-		<div ng-show="(!data || !data.length) && !loading">
+		<div ng-show="(!data || !data.length) && !loading && !data.error">
 			No search results found for "{{query_display}}"!
 			<br >
 			<br >
@@ -62,7 +68,7 @@
 		</div>
 		
 		<!-- Actual output of movie data -->
-		<section class="col-xs-12 col-sm-6 col-md-12" ng-show="data && data.length">
+		<section class="col-xs-12 col-sm-6 col-md-12" ng-show="data && data.length && !data.error">
 		
 			<!-- For search preferences (eg. sorting, result limits) -->
 			<nav class="navbar navbar-default">
@@ -110,11 +116,11 @@
 					</a>
 				</div>
 				<div class="col-xs-12 col-sm-12 col-md-6 excerpet">
-					<h3><a ui-sref="#" style="cursor: pointer;">{{movie.movie_title}}</a></h3>
+					<h3><a ng-click="onMovieClick(movie.movie_id)" style="cursor: pointer;">{{movie.movie_title}}</a></h3>
 					<ul class="meta-search list-unstyled">
 						<li><h5>
 							<i class="glyphicon glyphicon-search"></i> 
-							ID: <span class="label label-info">{{movie.movie_id}}</span>
+							Movie ID: <u>{{movie.movie_id}}</u>
 						</h5></li>
 						<li><h5>
 							<i class="glyphicon glyphicon-calendar"></i> 
@@ -128,7 +134,11 @@
 							<i class="glyphicon glyphicon-tag"></i> 
 							Genre(s): 
 							<ul class="list-unstyled list-inline" style="display: inline-block;">
-								<li ng-repeat="genre in movie.movie_genres"><span class="label label-info">{{genre}}</span></li>
+								<li ng-repeat="genre in movie.movie_genres">
+									<span class="label label-info btn btn-primary" ng-click="browseByMovieGenre(genre)">
+										{{genre}}
+									</span>
+								</li>
 							</ul>
 						</h5></li>
 						<li><h5>
@@ -136,10 +146,18 @@
 							Star(s): 
 							<ul class="list-unstyled list-inline" style="display: inline-block;">
 								<li ng-repeat="star in movie.movie_stars" style="margin-bottom:0.5em; margin-top:0.5em; cursor: pointer;">
-									<span class="label label-info btn btn-primary">{{star.star_first_name + " " + star.star_last_name}}</span>
+									<span class="label label-info btn btn-primary" ng-click="onStarClicked(star.star_id)">
+										{{star.star_first_name + " " + star.star_last_name}}
+									</span>
 								</li>
 							</ul>
 						</h5></li>
+						<li>
+							<button type="button" class="btn btn-success">
+								<span class="glyphicon glyphicon-shopping-cart"></span>
+								Add To Cart
+							</button>
+						</li>
 					</ul>
 				</div>
 				<span class="clearfix borda"></span>

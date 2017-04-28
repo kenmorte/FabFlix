@@ -24,7 +24,7 @@
 	});
   
 	app.config(['$stateProvider', '$urlRouterProvider', function($stateProvider, $urlRouterProvider) {
-		$urlRouterProvider.otherwise('/home');
+		$urlRouterProvider.otherwise('/login');
 
 		$stateProvider
 			.state('login', {
@@ -39,7 +39,7 @@
 				params: {userData: null}
 			})
 			.state('results', {
-				url : '/results?query_type={}starts_with={}order_type={}order_by={}offset={}limit={}',
+				url : '/results?query_type={}genre={}starts_with={}order_type={}order_by={}offset={}limit={}',
 				templateUrl : 'html/results.html',
 				controller : 'ResultsController',
 				params: {
@@ -47,10 +47,29 @@
 					query_display: null, 
 					query_type: null,
 					starts_with: null,
+					genre: null,
 					order_by: null,
 					order_type: null,
 					offset: null,
 					limit: null
+				}
+			})
+			.state('movie', {
+				url : '/movie?movieId={}',
+				templateUrl : 'html/movie.html',
+				controller : 'MovieController',
+				params: {
+					userData: null,
+					movieId: null
+				}
+			})
+			.state('star', {
+				url : '/star?starId={}',
+				templateUrl : 'html/star.html',
+				controller : 'StarController',
+				params: {
+					userData: null,
+					starId: null
 				}
 			})
 		}]
@@ -94,13 +113,15 @@
 		                    "Horror", "Indie", "James Bond", "Music", "Musical", "Musical/Performing Arts", "Mystery", 
 		                    "Roman", "Romance", "Sci-Fi", "Sport", "Spy", "Suspense", "Thriller", "War"];
 		$scope.charList = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-
+		
+		/**
+		 * Get search results for movies by first character in movie title
+		 */
 		$scope.browseByMovieTitle = function(event) {
 			if (!event || !event.target || !event.target.text)
 				return;
 			
 			var char = event.target.text;
-			
 			$state.go('results', {
 				userData: $scope.userData,
 				query_type: "BROWSE_BY_MOVIE_TITLE",
@@ -112,10 +133,36 @@
 				query_display: "Movies starting with '" + char + "'"	// IMPORTANT: For displaying proper response when no results found!
 			});
 		}
+		
+		/**
+		 * Searches for movies with a given genre
+		 */
+		$scope.browseByMovieGenre = function(genre) {
+			if (!genre)
+				return;
+			
+			$state.go('results', {
+				userData: $scope.userData,
+				query_type: "BROWSE_BY_MOVIE_GENRE",
+				genre: genre,
+				order_by: "title",	// by default
+				order_type: "asc",	// by default
+				offset: $rootScope.offset,
+				limit: $rootScope.limit,
+				query_display: "Movies with genre '" + genre + "'"	// IMPORTANT: For displaying proper response when no results found!
+			});
+		}
 	});
 	
+	/**
+	 * HTML File: html/results.html
+	 */
 	app.controller('ResultsController', function($scope, $rootScope, $stateParams, $state, $http, SearchService) {
 		$rootScope.title = "Results";
+		
+		$scope.loading = true;
+		$scope.errorName = "";
+		$scope.errorMessage = "";
 		
 		$scope.userData = $stateParams.userData;
 		$scope.query_type = $stateParams.query_type;
@@ -125,8 +172,8 @@
 		$scope.offset = Number($stateParams.offset);
 		$scope.limit = $stateParams.limit;
 		$scope.starts_with = $stateParams.starts_with;
+		$scope.genre = $stateParams.genre;
 		
-		$scope.loading = true;
 		$scope.TITLE_COLUMN = "Title";
 		$scope.YEAR_COLUMN = "Year";
 		
@@ -141,12 +188,11 @@
 		
 		if ($stateParams.query_type == "BROWSE_BY_MOVIE_TITLE") {
 			SearchService.browseByMovieTitle($http, 
-					$stateParams.starts_with, 
-					$stateParams.order_by, $stateParams.order_type,
-					$stateParams.offset, $stateParams.limit)
+					$scope.starts_with, 
+					$scope.order_by, $scope.order_type,
+					$scope.offset, $scope.limit)
 				.then(function(data) {
 					if (data) {
-						console.log(data);
 						$scope.data = data.movie_data;
 						$scope.number_of_results = Number(data.number_of_results);
 						
@@ -166,10 +212,47 @@
 								.addClass('disabled');
 							$scope.nextButtonStyle.cursor = 'default';
 						}
+					} else {
+						$scope.data = null;
+						$scope.number_of_results = 0;
+					}
+					$scope.loading = false;
+				}
+			);
+		}
+		if ($stateParams.query_type == "BROWSE_BY_MOVIE_GENRE") {
+			SearchService.browseByMovieGenre($http, 
+					$scope.genre, 
+					$scope.order_by, $scope.order_type,
+					$scope.offset, $scope.limit)
+				.then(function(data) {
+					if (data.error) {
+						$scope.error = data.error;
+						$scope.errorMessage = data.message;
+						$scope.loading = false;
+						return;
+					}
+					
+					if (data) {
+						$scope.data = data.movie_data;
+						$scope.number_of_results = Number(data.number_of_results);
 						
+						$scope.previousButtonStyle = {cursor: 'pointer'};
+						$scope.nextButtonStyle = {cursor: 'pointer'};
 						
-						var currentPage = Math.floor($scope.number_of_results/$scope.limit) + 1;
-						$scope.paginations = []
+						$scope.previousButtonDisabled = $scope.offset <= 0;
+						$scope.nextButtonDisabled = $scope.offset + $scope.data.length >= $scope.number_of_results;
+						
+						if ($scope.previousButtonDisabled) {
+							angular.element( document.querySelector( '#previousButton' ) )
+								.addClass('disabled');
+							$scope.previousButtonStyle.cursor = 'default';
+						}
+						if ($scope.nextButtonDisabled) {
+							angular.element( document.querySelector( '#nextButton' ) )
+								.addClass('disabled');
+							$scope.nextButtonStyle.cursor = 'default';
+						}
 					} else {
 						$scope.data = null;
 						$scope.number_of_results = 0;
@@ -179,6 +262,28 @@
 			);
 		}
 		
+		/**
+		 * Searches for movies with a given genre
+		 */
+		$scope.browseByMovieGenre = function(genre) {
+			if (!genre)
+				return;
+			
+			$state.go('results', {
+				userData: $scope.userData,
+				query_type: "BROWSE_BY_MOVIE_GENRE",
+				genre: genre,
+				order_by: "title",	// by default
+				order_type: "asc",	// by default
+				offset: $rootScope.offset,
+				limit: $rootScope.limit,
+				query_display: "Movies with genre '" + genre + "'"	// IMPORTANT: For displaying proper response when no results found!
+			});
+		}
+		
+		/**
+		 * Refresh the search with new order column (title, year)
+		 */
 		$scope.adjustOrderBySorting = function(new_order_by_sorting) {
 			$state.go('results', {
 				userData: $scope.userData,
@@ -192,6 +297,9 @@
 			});
 		}
 		
+		/**
+		 * Refresh the search with new order type (descending, ascending)
+		 */
 		$scope.adjustOrderBySortingType = function(new_sort_type) {
 			$state.go('results', {
 				userData: $scope.userData,
@@ -205,6 +313,9 @@
 			});
 		}
 		
+		/**
+		 * Refresh the search with new search limit
+		 */
 		$scope.adjustSearchLimit = function(new_limit) {
 			$state.go('results', {
 				userData: $scope.userData,
@@ -212,12 +323,15 @@
 				starts_with: $scope.starts_with,
 				order_by: $scope.order_by,
 				order_type: $scope.order_type,
-				offset: $scope.offset,
+				offset: 0,
 				limit: new_limit,
 				query_display: $scope.query_display
 			});
 		}
 		
+		/**
+		 * Get the next set of search results 
+		 */
 		$scope.getNextResults = function() {
 			if ($scope.nextButtonDisabled)
 				return;
@@ -235,6 +349,9 @@
 			});
 		}
 		
+		/**
+		 * Get the previous set of search results
+		 */
 		$scope.getPreviousResults = function() {
 			if ($scope.previousButtonDisabled)
 				return;
@@ -251,6 +368,110 @@
 				query_display: $scope.query_display
 			});
 		}
+		
+		/**
+		 * Go to the movie page for the clicked movie
+		 */
+		$scope.onMovieClick = function(movie_id) {
+			$state.go('movie', {
+				userData: $scope.userData,
+				movieId: movie_id
+			});
+		}
+		
+		$scope.onStarClicked = function(star_id) {
+			$state.go('star', {
+				userData: $scope.userData,
+				starId: star_id
+			});
+		}
+	});
+	
+	app.controller('MovieController', function($scope, $rootScope, $stateParams, $state, $http, $window, SearchService) {
+		$rootScope.title = "Movie";
+		$scope.movieId = $stateParams.movieId;
+		$scope.movieData = null;
+		$scope.loading = true;
+		
+		SearchService.getMovieById($http, $scope.movieId)
+			.then(function(data) {
+				if (data) {
+					$scope.movieData = data;
+					
+				} else {
+					$scope.movieData = null;
+				}
+				console.log($scope.movieData);
+				$scope.loading = false;
+			}
+		);
+		
+		/**
+		 * Searches for movies with a given genre
+		 */
+		$scope.browseByMovieGenre = function(genre) {
+			if (!genre)
+				return;
+			
+			$state.go('results', {
+				userData: $scope.userData,
+				query_type: "BROWSE_BY_MOVIE_GENRE",
+				genre: genre,
+				order_by: "title",	// by default
+				order_type: "asc",	// by default
+				offset: $rootScope.offset,
+				limit: $rootScope.limit,
+				query_display: "Movies with genre '" + genre + "'"	// IMPORTANT: For displaying proper response when no results found!
+			});
+		}
+		
+		$scope.onPreviewLinkClicked = function() {
+			$window.open($scope.movieData.movie_trailer_url, '_blank');
+		}
+		
+		$scope.onStarClicked = function(star_id) {
+			console.log(star_id);
+			$state.go('star', {
+				userData: $scope.userData,
+				starId: star_id
+			});
+		}
+		
+		$scope.backClicked = function() {
+			$window.history.back();
+		}
+	});
+	
+	app.controller('StarController', function($scope, $rootScope, $stateParams, $state, $http, $window, SearchService) {
+		$rootScope.title = "Star";
+		$scope.starId = $stateParams.starId;
+		$scope.starData = null;
+		$scope.loading = true;
+		
+		SearchService.getStarById($http, $scope.starId)
+			.then(function(data) {
+				if (data) {
+					$scope.starData = data;
+					
+				} else {
+					$scope.starData = null;
+				}
+				console.log($scope.starData);
+				$scope.loading = false;
+			}
+		);
+		
+		$scope.onMovieClick = function(movie_id) {
+			$state.go('movie', {
+				userData: $scope.userData,
+				movieId: movie_id
+			});
+		}
+		
+		$scope.backClicked = function() {
+			$window.history.back();
+		}
+		
 	});
   
 	app.factory('LoginService', function() {
@@ -274,7 +495,7 @@
 				return data !== null;
 			}
 		};
-  });
+	});
   
 	app.factory('SearchService', function() {
 		return {
@@ -290,6 +511,59 @@
 						order_type: order_type,
 						offset: offset,
 						limit: limit
+					}
+				// IMPORTANT: query_type parameter determines the type of GET operation to use!
+				}).then(function successCallback(response) {
+					return response.data;
+				}, function errorCallback(response) {
+					return null;
+				});
+			},
+			
+			browseByMovieGenre: function($http, genre, order_by, order_type, offset, limit) {
+				// HTTP GET runs asnychronously
+				return $http({
+					method: 'GET',
+					url: 'http://localhost:8080/FabFlix/servlet/FabFlixSearchServlet',	
+					params: { 
+						query_type: "BROWSE_BY_MOVIE_GENRE",
+						genre: genre,
+						order_by: order_by,
+						order_type: order_type,
+						offset: offset,
+						limit: limit
+					}
+				// IMPORTANT: query_type parameter determines the type of GET operation to use!
+				}).then(function successCallback(response) {
+					return response.data;
+				}, function errorCallback(response) {
+					return null;
+				});
+			},
+			
+			getMovieById: function($http, id) {
+				// HTTP GET runs asnychronously
+				return $http({
+					method: 'GET',
+					url: 'http://localhost:8080/FabFlix/servlet/FabFlixMovieServlet',	
+					params: { 
+						movieId: id
+					}
+				// IMPORTANT: query_type parameter determines the type of GET operation to use!
+				}).then(function successCallback(response) {
+					return response.data;
+				}, function errorCallback(response) {
+					return null;
+				});
+			},
+			
+			getStarById: function($http, id) {
+				// HTTP GET runs asnychronously
+				return $http({
+					method: 'GET',
+					url: 'http://localhost:8080/FabFlix/servlet/FabFlixStarServlet',	
+					params: { 
+						star_id: id
 					}
 				// IMPORTANT: query_type parameter determines the type of GET operation to use!
 				}).then(function successCallback(response) {
