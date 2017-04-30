@@ -1,0 +1,160 @@
+<div class="container-fluid">
+	<nav class="navbar navbar-default">
+		<div class="navbar-header">
+			<button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+				<span class="icon-bar"></span>
+				<span class="icon-bar"></span>
+				<span class="icon-bar"></span>
+			</button>    
+		</div>
+		<a class="navbar-brand" href="#">FabFlix</a>
+			
+		<div class="container-fluid">
+			<!-- Collect the nav links, forms, and other content for toggling -->
+			<div class="navbar-collapse collapse">
+				<ul class="nav navbar-nav navbar-left">
+			    	<li>
+			    		<a ui-sref="home"><span class="glyphicon glyphicon-home"></span>
+			    			Home
+			    		</a>
+			    	</li>
+			    	<li>
+			    		<a ui-sref="cart">
+			    			<span class="glyphicon glyphicon-shopping-cart"></span>
+			    			Shopping Cart
+			    		</a>
+			    	</li>
+				</ul>
+			    <ul class="nav navbar-nav navbar-right">
+			    	<li>
+			    		<a ui-sref="login">
+			    			<span class="glyphicon glyphicon-log-out"></span>
+			    			Logout
+			    		</a>
+			    	</li>
+			    </ul>
+			</div>
+		</div>
+	</nav>
+	
+	<div class="container-fluid">
+	
+		<!-- Notification for not filling out all fields -->
+		<div class="alert alert-danger" ng-show="errorFieldEmpty">
+			<strong>Error</strong>: You must fill out all fields!
+		</div>
+		
+		<!-- Notification for no cart data detected -->
+		<div class="alert alert-danger" ng-show="!cartData">
+			<strong>Error</strong>: No cart data detected! Cannot proceed with checkout.
+		</div>
+	
+		<h3>Checkout</h3>
+		<hr />
+		
+		<form class="form" ng-show="cartData" ng-submit="onCheckoutSubmit()" ng-keypress="($event.which === 13)?onCheckoutSubmit():0">
+			<div class="form-group">
+				<label for="firstNameInput"><b>First Name</b></label>
+				<input ng-model="firstName" type="text" class="form-control" required="">
+			</div>
+			
+			<div class="form-group">
+				<label for="lastNameInput"><b>Last Name</b></label>
+				<input ng-model="lastName" type="text" class="form-control" required="">
+			</div>
+			
+			<div class="form-group">
+				<label for="creditCardNumber"><b>Credit Card Number</b></label>
+				<input ng-model="creditCardNumber" type="text" class="form-control" required="">
+			</div>
+			
+			
+			<div><label>Credit Card Expiration</label></div>
+			<div class="form-inline" style="display: inline;">
+				<label for="expirationYear">Year</label>
+				<select class="form-control" id="expirationYear" ng-model="expirationYear">
+					<option>2000</option>
+					<option>2001</option>
+					<option>2002</option>
+					<option>2003</option>
+					<option>2004</option>
+					<option selected>2005</option>
+					<option>2006</option>
+					<option>2007</option>
+					<option>2008</option>
+					<option>2009</option>
+					<option>2010</option>
+					<option>2011</option>
+					<option>2012</option>
+					<option>2013</option>
+					<option>2014</option>
+					<option>2015</option>
+					<option>2016</option>
+					<option>2017</option>
+					<option>2018</option>
+					<option>2019</option>
+					<option>2020</option>
+				</select>
+  
+				<label for="expirationMonth" style="margin-left: 10px;">Month</label>
+				<select class="form-control" id="expirationMonth" ng-model="expirationMonth">
+					<option>01</option>
+					<option>02</option>
+					<option>03</option>
+					<option>04</option>
+					<option>05</option>
+					<option>06</option>
+					<option>07</option>
+					<option>08</option>
+					<option>09</option>
+					<option>10</option>
+					<option>11</option>
+					<option>12</option>
+				</select>
+				
+				<label for="expirationDay" style="margin-left: 10px;">Day</label>
+				<select class="form-control" id="expirationDay" ng-model="expirationDay">
+					<option>01</option>
+					<option>02</option>
+					<option>03</option>
+					<option>04</option>
+					<option>05</option>
+					<option>06</option>
+					<option>07</option>
+					<option>08</option>
+					<option>09</option>
+					<option>10</option>
+					<option>11</option>
+					<option>12</option>
+					<option>13</option>
+					<option>14</option>
+					<option>15</option>
+					<option>16</option>
+					<option>17</option>
+					<option>18</option>
+					<option>19</option>
+					<option>20</option>
+					<option>21</option>
+					<option>22</option>
+					<option>23</option>
+					<option>24</option>
+					<option>25</option>
+					<option>26</option>
+					<option>27</option>
+					<option>28</option>
+					<option>29</option>
+					<option>30</option>
+					<option>31</option>
+				</select>
+			</div>
+			
+			<div class="form-group" style="margin-top: 20px;">
+				<button class="btn btn-primary btn-block" type="button" ng-disabled="loadingCheckout" ng-click="onCheckoutSubmit()">
+					Submit
+					<i class="fa fa-spinner fa-spin fa-lg fa-fw" ng-show="loadingCheckout"></i>
+				</button>
+			</div>
+			<hr />
+		</form>
+	</div>
+</div>

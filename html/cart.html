@@ -1,0 +1,155 @@
+<div class="container-fluid">
+	<nav class="navbar navbar-default">
+		<div class="navbar-header">
+			<button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+				<span class="icon-bar"></span>
+				<span class="icon-bar"></span>
+				<span class="icon-bar"></span>
+			</button>    
+		</div>
+		<a class="navbar-brand" href="#">FabFlix</a>
+			
+		<div class="container-fluid">
+			<!-- Collect the nav links, forms, and other content for toggling -->
+			<div class="navbar-collapse collapse">
+				<ul class="nav navbar-nav navbar-left">
+			    	<li>
+			    		<a ui-sref="home"><span class="glyphicon glyphicon-home"></span>
+			    			Home
+			    		</a>
+			    	</li>
+			    	<li>
+			    		<a ui-sref="cart">
+			    			<span class="glyphicon glyphicon-shopping-cart"></span>
+			    			Shopping Cart
+			    		</a>
+			    	</li>
+				</ul>
+			    <ul class="nav navbar-nav navbar-right">
+			    	<li>
+			    		<a ui-sref="login">
+			    			<span class="glyphicon glyphicon-log-out"></span>
+			    			Logout
+			    		</a>
+			    	</li>
+			    </ul>
+			</div>
+		</div>
+	</nav>
+	
+	<div class="container">
+	
+		<!-- Notification for removing a movie -->
+		<div class="alert alert-danger" ng-show="removedMovieTitle">
+			You have successfully removed <strong>{{removedMovieTitle}}</strong> ({{removedMovieID}}) from your cart!
+		</div>
+		
+		<!-- Notification for updating a movie -->
+		<div class="alert alert-success" ng-show="updatedMovieTitle">
+			You have successfully updated <strong>{{updatedMovieTitle}}</strong> ({{updatedMovieID}}) from your cart!
+		</div>
+		
+		<div align="right" ng-show="cartData && cartData.length && !cartData.error">
+			<button type="button" class="btn btn-primary" align="right" ng-click="onProceedToCheckoutClick()">
+			 	<span class="glyphicon glyphicon-ok"></span>
+				Proceed to Checkout
+			</button>
+		</div>
+		
+		<h3>Shopping Cart</h3>
+		<hr />
+		
+		<!-- Nothing in shopping cart screen if no movies in cart -->
+		<div ng-show="(!cartData || !cartData.length) && !cartData.error">
+			You have nothing in your shopping cart.
+		</div>
+		
+		<!-- Actual output of cart data -->
+		<section class="col-xs-12 col-sm-6 col-md-12" ng-show="cartData && cartData.length && !cartData.error">
+			<article class="search-result row" ng-repeat="movie in cartData">
+				<div class="col-xs-12 col-sm-12 col-md-3">
+					<a ui-sref="#" title="{{movie.title}}" class="thumbnail" style="cursor: pointer;">
+						<img src="{{movie.movie_banner_url}}" alt="{{movie.movie_title}}" />
+					</a>
+				</div>
+				<div class="col-xs-12 col-sm-12 col-md-6 excerpet">
+					<h3><a ng-click="onMovieClick(movie.movie_id)" style="cursor: pointer;">{{movie.movie_title}}</a></h3>
+					<ul class="meta-search list-unstyled">
+						<li><h5>
+							<i class="glyphicon glyphicon-search"></i> 
+							Movie ID: <u>{{movie.movie_id}}</u>
+						</h5></li>
+						<li><h5>
+							<i class="glyphicon glyphicon-calendar"></i> 
+							Year Released: <span class="label label-info">{{movie.movie_year}}</span>
+						</h5></li>
+						<li><h5>
+							<i class="glyphicon glyphicon-film"></i> 
+							Director: <span class="label label-info">{{movie.movie_director}}</span>
+						</h5></li>
+						<li><h5>
+							<i class="glyphicon glyphicon-tag"></i> 
+							Genre(s): 
+							<ul class="list-unstyled list-inline" style="display: inline-block;">
+								<li ng-repeat="genre in movie.movie_genres">
+									<span class="label label-info btn btn-primary" ng-click="browseByMovieGenre(genre)">
+										{{genre}}
+									</span>
+								</li>
+							</ul>
+						</h5></li>
+						<li><h5>
+							<i class="glyphicon glyphicon-user"></i> 
+							Star(s): 
+							<ul class="list-unstyled list-inline" style="display: inline-block;">
+								<li ng-repeat="star in movie.movie_stars" style="margin-bottom:0.5em; margin-top:0.5em; cursor: pointer;">
+									<span class="label label-info btn btn-primary" ng-click="onStarClicked(star.star_id)">
+										{{star.star_first_name + " " + star.star_last_name}}
+									</span>
+								</li>
+							</ul>
+						</h5></li>
+						<li>
+							<div class="row">
+								<div class="col-xs-3 center-block">
+									<label for="quantity">Quantity</label>
+							    	<div class="input-group">
+							     		<span class="input-group-btn">
+							        		<button class="btn btn-primary" type="button" ng-click="subtractCartQuantity(movie)">-</button>
+							      		</span>
+							      		<input id="quantity" ng-model="movie.cartQuantity" type="text" class="form-control" style="text-align: center;">
+							     		<span class="input-group-btn">
+							        		<button class="btn btn-primary" type="button" ng-click="addCartQuantity(movie)">+</button>
+							      		</span>
+							    	</div>
+							    </div>
+							  	<div class="col-lg-3">
+							  		<label for="updateCartButton"></label>
+							    	<div class="input-group" style="margin-top: 6px">
+										<button id="updateCartButton" type="button" class="btn btn-success" ng-click="updateCart(movie)">
+											<span class="glyphicon glyphicon-pencil"></span>
+											Update Cart
+										</button>
+							    	</div>
+							  	</div>
+						  	</div>
+						</li>
+						<li style="margin-top: 50px">
+							<button id="addToCartButton" type="button" class="btn btn-danger" ng-click="removeFromCart(movie)">
+								<span class="glyphicon glyphicon-trash"></span>
+								Remove from Cart
+							</button>
+						</li>
+					</ul>
+				</div>
+				<span class="clearfix borda"></span>
+				<hr />
+			</article>
+			
+			<button type="button" class="btn btn-primary btn-lg btn-block" ng-click="onProceedToCheckoutClick()" style="margin-bottom: 20px;">
+				<span class="glyphicon glyphicon-ok"></span>
+				Proceed to Checkout
+			</button>
+		</section>
+	</div>
+</div>

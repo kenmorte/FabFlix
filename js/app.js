@@ -38,7 +38,10 @@
 				url : '/home',
 				templateUrl : 'html/home.html',
 				controller : 'HomeController',
-				params: {userData: null}
+				params: {
+					userData: null,
+					confirmationMessage: null
+				}
 			})
 			.state('results', {
 				url : '/results?query_type={}title={}year={}director={}starFirstName={}starLastName={}genre={}starts_with={}order_type={}order_by={}offset={}limit={}',
@@ -77,6 +80,23 @@
 				params: {
 					userData: null,
 					starId: null
+				}
+			})
+			.state('cart', {
+				url : '/cart',
+				templateUrl : 'html/cart.html',
+				controller : 'CartController',
+				params: {
+					userData: null
+				}
+			})
+			.state('checkout', {
+				url : '/checkout',
+				templateUrl : 'html/checkout.html',
+				controller : 'CheckoutController',
+				params: {
+					userData: null,
+					cartData: null
 				}
 			})
 		}]
@@ -122,6 +142,8 @@
 		                    "Roman", "Romance", "Sci-Fi", "Sport", "Spy", "Suspense", "Thriller", "War"];
 		$scope.charList = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 		$scope.showError = false;
+		
+		$scope.confirmationMessage = $stateParams.confirmationMessage;	// for when user comes from a checkout page
 		
 		$scope.searchSubmit = function() {
 			$scope.showError = !$scope.movieTitle && !$scope.year 
@@ -266,6 +288,14 @@
 								.addClass('disabled');
 							$scope.nextButtonStyle.cursor = 'default';
 						}
+						
+						// Set the default values for cart options for each movie
+						$scope.data.forEach(function(movie) {
+							if (!movie.cartQuantity)
+								movie.cartQuantity = 0;
+							movie.addToCartText = "Add to Cart";
+							movie.loadingCartSubmit = false;
+						});
 					} else {
 						$scope.data = null;
 						$scope.number_of_results = 0;
@@ -307,6 +337,14 @@
 								.addClass('disabled');
 							$scope.nextButtonStyle.cursor = 'default';
 						}
+						
+						// Set the default values for cart options for each movie
+						$scope.data.forEach(function(movie) {
+							if (!movie.cartQuantity)
+								movie.cartQuantity = 0;
+							movie.addToCartText = "Add to Cart";
+							movie.loadingCartSubmit = false;
+						});
 					} else {
 						$scope.data = null;
 						$scope.number_of_results = 0;
@@ -350,6 +388,15 @@
 								.addClass('disabled');
 							$scope.nextButtonStyle.cursor = 'default';
 						}
+						
+						// Set the default values for cart options for each movie
+						$scope.data.forEach(function(movie) {
+							if (!movie.cartQuantity)
+								movie.cartQuantity = 0;
+							movie.addToCartText = "Add to Cart";
+							movie.loadingCartSubmit = false;
+						});
+						
 					} else {
 						$scope.data = null;
 						$scope.number_of_results = 0;
@@ -357,6 +404,34 @@
 					$scope.loading = false;
 				}
 			);
+		}
+		
+		
+		/**
+		 * Adds to the cart quantity for a movie
+		 */
+		$scope.addCartQuantity = function(movie) {
+			if (isNaN(movie.cartQuantity))
+				movie.cartQuantity = 0;
+			movie.cartQuantity = Math.max(parseInt(movie.cartQuantity) + 1, 0);
+		}
+		
+		/**
+		 * Adds to the cart quantity for a movie
+		 */
+		$scope.subtractCartQuantity = function(movie) {
+			if (isNaN(movie.cartQuantity))
+				movie.cartQuantity = 0;
+			movie.cartQuantity = Math.max(parseInt(movie.cartQuantity) - 1, 0);
+		}
+		
+		$scope.submitCartQuantity = function(movie) {
+			if (isNaN(movie.cartQuantity))
+				movie.cartQuantity = 0;
+			movie.loadingCartSubmit = true;
+			movie.addToCartText = "Adding to Cart";
+			// TODO: Hook up with backend
+			setTimeout(function(){ movie.loadingCartSubmit = false; movie.addToCartText = "Add to Cart"; }, 1000);
 		}
 		
 		/**
@@ -490,18 +565,49 @@
 		$scope.movieData = null;
 		$scope.loading = true;
 		
+		$scope.addToCartText = "Add to Cart";
+		$scope.loadingCartSubmit = false;	// is true after clicking "Add to Cart" button
+		$scope.cartQuantity = "0";	// TODO: Hook up w/backend
+		
 		SearchService.getMovieById($http, $scope.movieId)
 			.then(function(data) {
 				if (data) {
 					$scope.movieData = data;
+					console.log(data);
 					
 				} else {
 					$scope.movieData = null;
 				}
-				console.log($scope.movieData);
 				$scope.loading = false;
 			}
 		);
+		
+		/**
+		 * Adds to the cart quantity for a movie
+		 */
+		$scope.addCartQuantity = function() {
+			if (isNaN($scope.cartQuantity))
+				$scope.cartQuantity = 0;
+			$scope.cartQuantity = Math.max(parseInt($scope.cartQuantity) + 1, 0);
+		}
+		
+		/**
+		 * Adds to the cart quantity for a movie
+		 */
+		$scope.subtractCartQuantity = function() {
+			if (isNaN($scope.cartQuantity))
+				$scope.cartQuantity = 0;
+			$scope.cartQuantity = Math.max(parseInt($scope.cartQuantity) - 1, 0);
+		}
+		
+		$scope.submitCartQuantity = function() {
+			if (isNaN($scope.cartQuantity))
+				$scope.cartQuantity = 0;
+			$scope.loadingCartSubmit = true;
+			$scope.addToCartText = "Adding to Cart";
+			// TODO: Hook up with backend
+			$window.setTimeout(function(){ $scope.loadingCartSubmit = false; $scope.addToCartText = "Add to Cart"; }, 100);
+		}
 		
 		/**
 		 * Searches for movies with a given genre
@@ -553,7 +659,6 @@
 				} else {
 					$scope.starData = null;
 				}
-				console.log($scope.starData);
 				$scope.loading = false;
 			}
 		);
@@ -568,7 +673,197 @@
 		$scope.backClicked = function() {
 			$window.history.back();
 		}
+	});
+	
+	app.controller('CartController', function($scope, $rootScope, $stateParams, $state, $http, $window, SearchService) {
+		$rootScope.title = "Cart";
+		/**
+		 * TODO: Replace with real cart data
+		 * 
+		 * JSON format is a list of movie objects with a quantity attribute.
+		 * Updating the chart 
+		 */
+		$scope.cartData = [
+		                   { 
+		                	   movie_banner_url: "https://images-na.ssl-images-amazon.com/images/M/MV5BMTQ3NTIyMzczMF5BMl5BanBnXkFtZTYwMjgzNTg2._V1_.jpg", 
+		                	   movie_year: 2004, 
+		                	   movie_id: 693003, 
+		                	   movie_director: "Christian Morte",
+		                	   movie_genres: ["Comedy", "Sci-Fi", "Romance"],
+		                	   movie_stars: [
+		                	                 {
+		                	                	 star_first_name: "Aishwarya",
+		                	                	 star_id: 140022,
+		                	                	 star_last_name: "Rai"
+		                	                 },
+		                	                 {
+		                	                	 star_first_name: "Aishwarya",
+		                	                	 star_id: 140022,
+		                	                	 star_last_name: "Rai"
+		                	                 }
+		      		           ],
+		                	   movie_title: "Ocean's Twelve",
+		                	   cartQuantity: 2
+		                   },
+		                   { 
+		                	   movie_banner_url: "https://images-na.ssl-images-amazon.com/images/M/MV5BMTQ3NTIyMzczMF5BMl5BanBnXkFtZTYwMjgzNTg2._V1_.jpg", 
+		                	   movie_year: 2004, 
+		                	   movie_id: 693004, 
+		                	   movie_director: "Christian Morte",
+		                	   movie_genres: ["Comedy", "Sci-Fi", "Romance"],
+		                	   movie_stars: [
+		                	                 {
+		                	                	 star_first_name: "Aishwarya",
+		                	                	 star_id: 140022,
+		                	                	 star_last_name: "Rai"
+		                	                 }
+		                	   ],
+		                	   movie_title: "Ocean's Eleven",
+		                	   cartQuantity: 3
+		                   },
+		                   { 
+		                	   movie_banner_url: "https://images-na.ssl-images-amazon.com/images/M/MV5BMTQ3NTIyMzczMF5BMl5BanBnXkFtZTYwMjgzNTg2._V1_.jpg", 
+		                	   movie_year: 2004, 
+		                	   movie_id: 693005, 
+		                	   movie_director: "Christian Morte",
+		                	   movie_genres: ["Comedy", "Sci-Fi", "Romance"],
+		                	   movie_stars: [
+		                	                 {
+		                	                	 star_first_name: "Aishwarya",
+		                	                	 star_id: 140022,
+		                	                	 star_last_name: "Rai"
+		                	                 },
+		                	                 {
+		                	                	 star_first_name: "Aishwarya",
+		                	                	 star_id: 140022,
+		                	                	 star_last_name: "Rai"
+		                	                 },
+		                	                 {
+		                	                	 star_first_name: "Aishwarya",
+		                	                	 star_id: 140022,
+		                	                	 star_last_name: "Rai"
+		                	                 }
+		      		           ],
+		                	   movie_title: "Ocean's Thirteen",
+		                	   cartQuantity: 1
+		                   }
+		]
 		
+		/**
+		 * Adds to the cart quantity for a movie
+		 */
+		$scope.addCartQuantity = function(movie) {
+			if (isNaN(movie.cartQuantity))
+				movie.cartQuantity = movie.cartQuantity;
+			movie.cartQuantity = Math.max(parseInt(movie.cartQuantity) + 1, 0);
+		}
+		
+		/**
+		 * Adds to the cart quantity for a movie
+		 */
+		$scope.subtractCartQuantity = function(movie) {
+			if (isNaN(movie.cartQuantity))
+				movie.cartQuantity = movie.cartQuantity;
+			movie.cartQuantity = Math.max(parseInt(movie.cartQuantity) - 1, 0);
+		}
+		
+		$scope.updateCart = function(movie) {
+			// Remove the movie if the quantity given was 0
+			if (movie.cartQuantity == 0) {
+				return $scope.removeFromCart(movie);
+			}
+			
+			// TODO: Send HTTP POST Request to update movie quantity using movie.cartQuantity
+			
+			// Hide any previous alerts if there were any
+			$scope.removedMovieTitle = null;
+			$scope.removedMovieID = null;
+			
+			// Show new alert for updated movie
+			$scope.updatedMovieTitle = movie.movie_title;
+			$scope.updatedMovieID = movie.movie_id;
+		}
+		
+		/**
+		 * Removes a movie from the cart
+		 */
+		$scope.removeFromCart = function(movie) {
+			// TODO: Sent an HTTP Post request to remove the movie, replace implementation below
+			
+			// Simulates removing a movie from the cart
+			var index = $scope.cartData.indexOf(movie);
+			if (index > -1) {
+				$scope.cartData.splice(index, 1);
+				
+				// Hide any previous alerts if there were any
+				$scope.updatedMovieTitle = null;
+				$scope.updatedMovieID = null;
+				
+				// Show new alert for removed movie
+				$scope.removedMovieTitle = movie.movie_title;
+				$scope.removedMovieID = movie.movie_id;
+			}
+		}
+		
+		/**
+		 * Go to the movie page for the clicked movie
+		 */
+		$scope.onMovieClick = function(movie_id) {
+			$state.go('movie', {
+				userData: $scope.userData,
+				movieId: movie_id
+			});
+		}
+		
+		$scope.onProceedToCheckoutClick = function() {
+			// Go to checkout page here!
+			$state.go('checkout', {
+				userData: $scope.userData,
+				cartData: $scope.cartData
+			});
+		}
+	});
+	
+	
+	app.controller('CheckoutController', function($scope, $rootScope, $stateParams, $state, $http, $window, SearchService) {
+		$rootScope.title = "Checkout";
+		
+		$scope.errorFieldEmpty = false;	// error for not filling out all fields
+		$scope.errorCheckout = false;	// error for unsuccessful checkout
+		$scope.loadingCheckout = false;	// to display progress spinner on checkout
+		
+		// by default, options for expiration date of credit card
+		$scope.expirationYear = "2005";
+		$scope.expirationMonth = "01";
+		$scope.expirationDay = "01";
+		
+		$scope.cartData = $stateParams.cartData;
+		
+		
+		$scope.onCheckoutSubmit = function() {
+			if (!($scope.firstName && $scope.lastName && $scope.creditCardNumber)) {
+				$scope.errorFieldEmpty = true;
+				return;
+			}
+			
+			// TODO: Do HTTP POST here for sending info to backend
+			// TODO: If failure, show error at the top of this screen
+			// TODO: If success, lead to confirmation page
+			
+			// TODO: Delete this placeholder implementation
+			$scope.loadingCheckout = true;
+			$window.setTimeout(function() { 
+				$scope.loadingCheckout = false;
+				
+				$state.go('home', {
+					userData: $scope.userData,
+					confirmationMessage: "You have successfully checked out the movies!"	// TODO: Connect w/backend message
+				});
+				
+				
+			}, 1000);
+			
+		}
 	});
   
 	app.factory('LoginService', function() {

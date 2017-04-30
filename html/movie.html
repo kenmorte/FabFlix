@@ -19,7 +19,7 @@
 			    		</a>
 			    	</li>
 			    	<li>
-			    		<a ui-sref="home">
+			    		<a ui-sref="cart">
 			    			<span class="glyphicon glyphicon-shopping-cart"></span>
 			    			Shopping Cart
 			    		</a>
@@ -106,10 +106,30 @@
 							Preview: <button type="button" class="btn btn-link" ng-click="onPreviewLinkClicked()">Watch Preview</button>
 						</h5></li>
 						<li>
-							<button type="button" class="btn btn-success">
-								<span class="glyphicon glyphicon-shopping-cart"></span>
-								Add To Cart
-							</button>
+							<div class="row">
+								<div class="col-xs-3 center-block">
+									<label for="quantity">Quantity</label>
+							    	<div class="input-group">
+							     		<span class="input-group-btn">
+							        		<button class="btn btn-primary" type="button" ng-click="subtractCartQuantity()">-</button>
+							      		</span>
+							      		<input id="quantity" ng-model="cartQuantity" type="text" class="form-control" style="text-align: center;">
+							     		<span class="input-group-btn">
+							        		<button class="btn btn-primary" type="button" ng-click="addCartQuantity()">+</button>
+							      		</span>
+							    	</div>
+							    </div>
+							  	<div class="col-lg-3">
+							  		<label for="addToCartButton"></label>
+							    	<div class="input-group" style="margin-top: 6px">
+										<button id="addToCartButton" type="button" class="btn btn-success" ng-click="submitCartQuantity()" ng-disabled="loadingCartSubmit">
+											<span class="glyphicon glyphicon-shopping-cart"></span>
+											{{addToCartText}}
+											<i class="fa fa-spinner fa-spin fa-lg fa-fw" ng-show="loadingCartSubmit"></i>
+										</button>
+							    	</div>
+							  	</div>
+						  	</div>
 						</li>
 					</ul>
 				</div>

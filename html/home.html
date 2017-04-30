@@ -19,7 +19,7 @@
 			    		</a>
 			    	</li>
 			    	<li>
-			    		<a ui-sref="home">
+			    		<a ui-sref="cart">
 			    			<span class="glyphicon glyphicon-shopping-cart"></span>
 			    			Shopping Cart
 			    		</a>
@@ -38,6 +38,11 @@
 	</nav>
 	
 	<div class="container-fluid">
+		<!-- Notification for successful checkout  -->
+		<div class="alert alert-success" ng-show="confirmationMessage">
+			<strong>Checkout Success</strong>: {{confirmationMessage}}
+		</div>
+	
 		<h3>Search For Movies</h3>
 		
 		<form class="form" ng-submit="searchSubmit()" ng-keypress="($event.which === 13)?searchSubmit():0">
