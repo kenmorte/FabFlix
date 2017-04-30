@@ -1,6 +1,5 @@
 import java.io.IOException;
 import java.io.StringWriter;
-
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;
@@ -70,7 +69,12 @@ public class FabFlixSearchServlet extends HttpServlet {
     	try {
     		restManager = new FabFlixRESTManager(out);
     		restManager.attemptConnection();
-    		result = restManager.getMoviesByFirstCharacter(character, orderColumn, orderType, offset, limit);
+    		result = restManager.getMoviesByFirstCharacter(
+    			request.getSession(true).getId(), 
+    			character, 
+    			orderColumn, orderType, 
+    			offset, limit
+    		);
     		
     		if (out.toString().isEmpty())
     			out.write(result.toString());
@@ -112,7 +116,12 @@ public class FabFlixSearchServlet extends HttpServlet {
     	try {
     		restManager = new FabFlixRESTManager(out);
     		restManager.attemptConnection();
-    		result = restManager.getMoviesByGenre(genre, orderColumn, orderType, offset, limit);
+    		result = restManager.getMoviesByGenre(
+    			request.getSession(true).getId(), 
+    			genre, 
+    			orderColumn, orderType, 
+    			offset, limit
+    		);
     		
     		if (out.toString().isEmpty())
     			out.write(result.toString());
@@ -159,6 +168,7 @@ public class FabFlixSearchServlet extends HttpServlet {
     		restManager = new FabFlixRESTManager(out);
     		restManager.attemptConnection();
     		result = restManager.getMoviesByParameters(
+    			request.getSession(true).getId(),
     			title, 
     			year, 
     			director, 

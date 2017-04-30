@@ -138,6 +138,7 @@ public class FabFlixRESTManager
 	 * 			"movie_director": director of the first movie,
 	 * 			"movie_banner_url": URL of the first movie's banner,
 	 * 			"movie_trailer_url": URL of the first movie's trailer,
+	 * 			"movie_cart_quantity": quantity of this movie inside a user session's cart, 
 	 * 			"movie_genres": [
 	 * 				genre1,
 	 * 				genre2,
@@ -168,7 +169,9 @@ public class FabFlixRESTManager
 	 * @throws SQLException if there was an error parsing the SQL command
 	 * @throws JSONException if there was an error parsing the JSON object
 	 */
-	public JSONObject getMoviesByFirstCharacter(String character, 
+	public JSONObject getMoviesByFirstCharacter(
+		String sessionId,
+		String character, 
 		String orderColumn, String orderType, 
 		String offset, String limit) throws SQLException, JSONException {
 		if (character == null) {
@@ -190,8 +193,8 @@ public class FabFlixRESTManager
 		
 		
 		Statement select, nMoviesSelect;
-		PreparedStatement genreStatement, starsStatement;
-		ResultSet movieResult, genreResult, starsResult, nMoviesResult;
+		PreparedStatement genreStatement, starsStatement, cartsStatement;
+		ResultSet movieResult, genreResult, starsResult, cartsResult, nMoviesResult;
 		JSONArray movieDataJSONArray, genresJSONArray, starsJSONArray;
 		JSONObject movieJSON, starJSON, resultJSON;
 		
@@ -204,6 +207,7 @@ public class FabFlixRESTManager
 		// Replace ? with the movie ID
 		genreStatement = mDatabase.prepareStatement("select g.name from genres g, genres_in_movies gm where gm.movie_id = ? and gm.genre_id = g.id;");
 		starsStatement = mDatabase.prepareStatement("select s.id, s.first_name,s.last_name from stars s, stars_in_movies sm where sm.movie_id = ? and sm.star_id = s.id;");
+		cartsStatement = mDatabase.prepareStatement("select amount from carts where session_id = \"" + sessionId + "\" and movie_id = ?");
 		movieResult = select.executeQuery("select * from movies where title like \"" + 
 				character + "%\" order by " + 
 				orderColumn + " " + 
@@ -223,6 +227,7 @@ public class FabFlixRESTManager
 		// Collect all the movies from the database
 		while (movieResult.next()) {
 			Integer movieID = movieResult.getInt(1);
+			Integer cartAmount = 0;
 			genresJSONArray = new JSONArray();
 			starsJSONArray = new JSONArray();
 			movieJSON = new JSONObject();
@@ -245,6 +250,13 @@ public class FabFlixRESTManager
 				starsJSONArray.put(starJSON);
 			}
 			
+			// Get the amount of this movie inside the cart for a specific user session
+			cartsStatement.setInt(1, movieID);
+			cartsResult = cartsStatement.executeQuery();
+			if (cartsResult.next()) {
+				cartAmount = cartsResult.getInt(1);
+			}
+			
 			// Put all the elements inside our resulting movie JSON
 			movieJSON.put("movie_id", movieID);
 			movieJSON.put("movie_title", movieResult.getString(2));
@@ -254,6 +266,7 @@ public class FabFlixRESTManager
 			movieJSON.put("movie_trailer_url", movieResult.getString(6));
 			movieJSON.put("movie_genres", genresJSONArray);
 			movieJSON.put("movie_stars", starsJSONArray);
+			movieJSON.put("movie_cart_quantity", cartAmount);
 			
 			movieDataJSONArray.put(movieJSON);
 		}
@@ -277,15 +290,17 @@ public class FabFlixRESTManager
 	 * @throws SQLException if there was an error parsing the SQL command
 	 * @throws JSONException if there was an error parsing the JSON object
 	 */
-	public JSONObject getMoviesByGenre(String genre,
+	public JSONObject getMoviesByGenre(
+		String sessionId,
+		String genre,
 		String orderColumn, String orderType, 
 		String offset, String limit) throws SQLException, JSONException {
 		if (genre == null)
 			throw new SQLException("No genre specified! Unable to execute query");
 		
 		Statement select, nMoviesSelect;
-		PreparedStatement genreStatement, starsStatement;
-		ResultSet movieResult, genreResult, starsResult, nMoviesResult;
+		PreparedStatement genreStatement, starsStatement, cartsStatement;
+		ResultSet movieResult, genreResult, starsResult, cartsResult, nMoviesResult;
 		JSONArray movieDataJSONArray, genresJSONArray, starsJSONArray;
 		JSONObject movieJSON, starJSON, resultJSON;
 		
@@ -294,6 +309,7 @@ public class FabFlixRESTManager
 		// Replace ? with the movie ID
 		genreStatement = mDatabase.prepareStatement("select g.name from genres g, genres_in_movies gm where gm.movie_id = ? and gm.genre_id = g.id;");
 		starsStatement = mDatabase.prepareStatement("select s.id, s.first_name,s.last_name from stars s, stars_in_movies sm where sm.movie_id = ? and sm.star_id = s.id;");
+		cartsStatement = mDatabase.prepareStatement("select amount from carts where session_id = \"" + sessionId + "\" and movie_id = ?");
 		movieResult = select.executeQuery("select m.* from genres g, movies m, genres_in_movies gm where g.name=\"" + 
 				genre + "\" and gm.genre_id = g.id and gm.movie_id = m.id order by " + 
 				orderColumn + " " + 
@@ -314,6 +330,7 @@ public class FabFlixRESTManager
 		// Collect all the movies from the database
 		while (movieResult.next()) {
 			Integer movieID = movieResult.getInt(1);
+			Integer cartAmount = 0;
 			genresJSONArray = new JSONArray();
 			starsJSONArray = new JSONArray();
 			movieJSON = new JSONObject();
@@ -336,6 +353,13 @@ public class FabFlixRESTManager
 				starsJSONArray.put(starJSON);
 			}
 			
+			// Get the amount of this movie inside the cart for a specific user session
+			cartsStatement.setInt(1, movieID);
+			cartsResult = cartsStatement.executeQuery();
+			if (cartsResult.next()) {
+				cartAmount = cartsResult.getInt(1);
+			}
+			
 			// Put all the elements inside our resulting movie JSON
 			movieJSON.put("movie_id", movieID);
 			movieJSON.put("movie_title", movieResult.getString(2));
@@ -345,6 +369,7 @@ public class FabFlixRESTManager
 			movieJSON.put("movie_trailer_url", movieResult.getString(6));
 			movieJSON.put("movie_genres", genresJSONArray);
 			movieJSON.put("movie_stars", starsJSONArray);
+			movieJSON.put("movie_cart_quantity", cartAmount);
 			
 			movieDataJSONArray.put(movieJSON);
 		}
@@ -370,7 +395,11 @@ public class FabFlixRESTManager
 	 * @throws SQLException if there was an error parsing the SQL command
 	 * @throws JSONException if there was an error parsing the JSON object
 	 */
-	public JSONObject getMoviesByParameters(String title, String year, String director, 
+	public JSONObject getMoviesByParameters(
+		String sessionId,
+		String title, 
+		String year, 
+		String director, 
 		String starFirstName, String starLastName, 
 		String orderColumn, String orderType, 
 		String offset, String limit) throws SQLException, JSONException {
@@ -385,8 +414,8 @@ public class FabFlixRESTManager
 			limit = DATABASE_DEFAULT_LIMIT;
 		
 		Statement select, nMoviesSelect;
-		PreparedStatement genreStatement, starsStatement;
-		ResultSet movieResult, genreResult, starsResult, nMoviesResult;
+		PreparedStatement genreStatement, starsStatement, cartsStatement;
+		ResultSet movieResult, genreResult, starsResult, cartsResult, nMoviesResult;
 		JSONArray movieDataJSONArray, genresJSONArray, starsJSONArray;
 		JSONObject movieJSON, starJSON, resultJSON;
 		
@@ -399,6 +428,7 @@ public class FabFlixRESTManager
 		// Replace ? with the movie ID
 		genreStatement = mDatabase.prepareStatement("select g.name from genres g, genres_in_movies gm where gm.movie_id = ? and gm.genre_id = g.id;");
 		starsStatement = mDatabase.prepareStatement("select s.id, s.first_name,s.last_name from stars s, stars_in_movies sm where sm.movie_id = ? and sm.star_id = s.id;");
+		cartsStatement = mDatabase.prepareStatement("select amount from carts where session_id = \"" + sessionId + "\" and movie_id = ?");
 		movieResult = select.executeQuery(
 			"select distinct m.* from stars s, stars_in_movies sm, movies m " 
 			+ getSubstringMatchingWhereClause(title, year, director, starFirstName, starLastName)
@@ -418,6 +448,7 @@ public class FabFlixRESTManager
 		// Collect all the movies from the database
 		while (movieResult.next()) {
 			Integer movieID = movieResult.getInt(1);
+			Integer cartAmount = 0;
 			genresJSONArray = new JSONArray();
 			starsJSONArray = new JSONArray();
 			movieJSON = new JSONObject();
@@ -440,6 +471,13 @@ public class FabFlixRESTManager
 				starsJSONArray.put(starJSON);
 			}
 			
+			// Get the amount of this movie inside the cart for a specific user session
+			cartsStatement.setInt(1, movieID);
+			cartsResult = cartsStatement.executeQuery();
+			if (cartsResult.next()) {
+				cartAmount = cartsResult.getInt(1);
+			}
+			
 			// Put all the elements inside our resulting movie JSON
 			movieJSON.put("movie_id", movieID);
 			movieJSON.put("movie_title", movieResult.getString(2));
@@ -449,6 +487,7 @@ public class FabFlixRESTManager
 			movieJSON.put("movie_trailer_url", movieResult.getString(6));
 			movieJSON.put("movie_genres", genresJSONArray);
 			movieJSON.put("movie_stars", starsJSONArray);
+			movieJSON.put("movie_cart_quantity", cartAmount);
 			
 			movieDataJSONArray.put(movieJSON);
 		}
@@ -467,6 +506,7 @@ public class FabFlixRESTManager
 	 * 		"movie_director": director of the movie,
 	 * 		"movie_banner_url": URL of the movie's banner,
 	 * 		"movie_trailer_url": URL of the movie's trailer,
+	 * 		"movie_cart_quantity": quantity of this movie inside a user session's cart,
 	 * 		"movie_genres": [
 	 * 			genre1,
 	 * 			genre2,
@@ -492,13 +532,15 @@ public class FabFlixRESTManager
 	 * @throws SQLException if there was an error in the SQL command or the ID was null
 	 * @throws JSONException if there was an error parsing the resulting JSON object
 	 */
-	public JSONObject getMovieById(Integer id) throws SQLException, JSONException {
+	public JSONObject getMovieById(String sessionId, Integer id) throws SQLException, JSONException {
 		if (id == null)
 			throw new SQLException("No movie ID provided!");
+		if (sessionId == null)
+			throw new SQLException("No session ID provided for querying for one movie!");
 		
 		Statement select;
-		PreparedStatement genreStatement, starsStatement;
-		ResultSet result, genreResult, starsResult;
+		PreparedStatement genreStatement, starsStatement, cartsStatement;
+		ResultSet result, genreResult, starsResult, cartsResult;
 		JSONArray genresJSONArray, starsJSONArray;
 		JSONObject json = null, starJSON;
 		
@@ -507,12 +549,14 @@ public class FabFlixRESTManager
 		// Replace ? with the movie ID
 		genreStatement = mDatabase.prepareStatement("select g.name from genres g, genres_in_movies gm where gm.movie_id = ? and gm.genre_id = g.id;");
 		starsStatement = mDatabase.prepareStatement("select s.id, s.first_name,s.last_name from stars s, stars_in_movies sm where sm.movie_id = ? and sm.star_id = s.id;");
+		cartsStatement = mDatabase.prepareStatement("select amount from carts where session_id = \"" + sessionId + "\" and movie_id = ?");
 		
 		if (result.next()) {
+			Integer movieID = result.getInt(1);
+			Integer cartAmount = 0;
 			json = new JSONObject();
 			genresJSONArray = new JSONArray();
 			starsJSONArray = new JSONArray();
-			Integer movieID = result.getInt(1);
 			
 			// Collect all the genres associated with the current movie
 			genreStatement.setInt(1, movieID);
@@ -532,6 +576,13 @@ public class FabFlixRESTManager
 				starsJSONArray.put(starJSON);
 			}
 			
+			// Get the amount of this movie inside the cart for a specific user session
+			cartsStatement.setInt(1, movieID);
+			cartsResult = cartsStatement.executeQuery();
+			if (cartsResult.next()) {
+				cartAmount = cartsResult.getInt(1);
+			}
+			
 			json.put("movie_id", movieID);
 			json.put("movie_title", result.getString(2));
 			json.put("movie_year", result.getInt(3));
@@ -540,6 +591,7 @@ public class FabFlixRESTManager
 			json.put("movie_trailer_url", result.getString(6));
 			json.put("movie_genres", genresJSONArray);
 			json.put("movie_stars", starsJSONArray);
+			json.put("movie_cart_quantity", cartAmount);
 		}
 		
 		return json;
@@ -611,6 +663,111 @@ public class FabFlixRESTManager
 			starJSON.put("star_movies", movieJSONArray);
 		}
 		return starJSON;
+	}
+	
+	/**
+	 * Updates the cart for a user session for a given movie. Depending on the amount
+	 * specified, the action taken will either be:
+	 * 		0: Delete the movie
+	 * 		> 1: Update/insert the movie, depending on if it was already present on the cart
+	 * 
+	 * @param sessionId	ID for a user session
+	 * @param movieId	movie ID
+	 * @param amount	amount to be updated on the cart
+	 * @return JSON object w/number of rows affected from the operation (should return 1)
+	 * @throws SQLException	if there was an error in the SQL command or the ID was null
+	 * @throws JSONException	if there was an error parsing the resulting JSON object
+	 */
+	public JSONObject updateMovieInCart(String sessionId, Integer movieId, Integer amount) throws SQLException, JSONException {
+		if (sessionId == null)
+			throw new SQLException("No session ID provided for adding to cart!");
+		if (movieId == null)
+			throw new SQLException("No movie ID provided for adding to cart!");
+		if (amount == null)
+			throw new SQLException("No amount provided for adding to cart!");
+		if (amount < 0)
+			throw new SQLException("Unable to add negative amount to cart!");
+		
+		Statement statement;
+		ResultSet result;
+		Integer success;
+		JSONObject data;
+		
+		statement = mDatabase.createStatement();
+		result = statement.executeQuery("select * from carts " + 
+				" where session_id = \"" + sessionId + "\" and" + 
+				" movie_id = " + movieId
+		);
+		success = 0;
+		data = new JSONObject();
+		
+		if (result.next()) {	// should only update row (movie is inside cart already
+			
+			// Update the value only if the amount if > 0
+			if (amount > 0)
+				success = statement.executeUpdate("update carts " + 
+						"set amount = " + amount + 
+						" where session_id = \"" + sessionId + "\"" + 
+						" and movie_id = " + movieId
+				);
+			else 
+				// Delete the movie from the cart if the amount is specified as 0
+				success = statement.executeUpdate("delete from carts " + 
+						" where session_id = \"" + sessionId + "\"" + 
+						" and movie_id = " + movieId
+				);
+		} else
+			// Insert the movie into the cart with a specified amount
+			success = statement.executeUpdate("insert into carts" + 
+					" values(\"" + sessionId + "\"," + movieId + "," + amount + ")"
+			);
+		
+		data.put("success", success);
+		return data;
+	}
+	
+	/**
+	 * Returns a JSON containing movie objects that are inside a specific
+	 * user session's cart. This is inside the attribute "cartData". 
+	 * If no movies were found, the array is empty.
+	 * @see FabFlixRESTManager#getMovieById(String sessionId, Integer id) for movie JSON format
+	 * 
+	 * @param sessionId	ID for a user session
+	 * @return	JSONArray containing movie JSON objects for the user's cart
+	 * @throws SQLException	if there was an error in the SQL command or the ID was null
+	 * @throws JSONException	if there was an error parsing the resulting JSON object
+	 */
+	public JSONObject getCartData(String sessionId) throws SQLException, JSONException {
+		if (sessionId == null)
+			throw new SQLException("No session ID provided for viewing cart data!");
+		
+		Statement cartStatement;
+		ResultSet cartResult;
+		JSONObject movieJSON, resultJSON;
+		JSONArray result;
+		
+		cartStatement = mDatabase.createStatement();
+		cartResult = cartStatement.executeQuery(
+			"select m.*, c.amount" + 
+			" from movies m, carts c" + 
+			" where c.session_id = \"" + sessionId + "\" and c.movie_id = m.id"
+		);
+		result = new JSONArray();
+		resultJSON = new JSONObject();
+		
+		while (cartResult.next()) {
+			movieJSON = new JSONObject();
+			movieJSON.put("movie_id", cartResult.getInt(1));
+			movieJSON.put("movie_title", cartResult.getString(2));
+			movieJSON.put("movie_year", cartResult.getInt(3));
+			movieJSON.put("movie_director", cartResult.getString(4));
+			movieJSON.put("movie_banner_url", cartResult.getString(5));
+			movieJSON.put("movie_trailer_url", cartResult.getString(6));
+			movieJSON.put("movie_cart_quantity", cartResult.getInt(7));
+			result.put(movieJSON);
+		}
+		resultJSON.put("cartData", result);
+		return resultJSON;
 	}
 	
 	/**

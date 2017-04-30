@@ -43,6 +43,11 @@
 			<i class="fa fa-spinner fa-spin fa-3x fa-fw"></i>
 		</div>
 		
+		<!-- Notification for adding a movie to the cart -->
+		<div class="alert alert-success" ng-show="!loading && successUpdateMovie">
+			<strong>Success</strong>: Updated your cart quantity for the movie <i>{{successUpdateMovie}}</i>!
+		</div>
+		
 		<div class="container-fluid" ng-show="!loading" style="margin-bottom: 1em;">
 			<button type="button" class="btn btn-primary" ng-click="backClicked()">
 				<span class="glyphicon glyphicon-chevron-left"></span>
@@ -113,7 +118,7 @@
 							     		<span class="input-group-btn">
 							        		<button class="btn btn-primary" type="button" ng-click="subtractCartQuantity()">-</button>
 							      		</span>
-							      		<input id="quantity" ng-model="cartQuantity" type="text" class="form-control" style="text-align: center;">
+							      		<input id="quantity" ng-model="movieData.movie_cart_quantity" type="text" class="form-control" style="text-align: center;">
 							     		<span class="input-group-btn">
 							        		<button class="btn btn-primary" type="button" ng-click="addCartQuantity()">+</button>
 							      		</span>

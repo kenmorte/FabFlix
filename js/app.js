@@ -216,7 +216,7 @@
 	/**
 	 * HTML File: html/results.html
 	 */
-	app.controller('ResultsController', function($scope, $rootScope, $stateParams, $state, $http, SearchService) {
+	app.controller('ResultsController', function($scope, $rootScope, $stateParams, $state, $http, SearchService, CartService) {
 		$rootScope.title = "Results";
 		
 		$scope.loading = true;
@@ -291,8 +291,8 @@
 						
 						// Set the default values for cart options for each movie
 						$scope.data.forEach(function(movie) {
-							if (!movie.cartQuantity)
-								movie.cartQuantity = 0;
+							if (!movie.movie_cart_quantity)
+								movie.movie_cart_quantity = 0;
 							movie.addToCartText = "Add to Cart";
 							movie.loadingCartSubmit = false;
 						});
@@ -340,8 +340,8 @@
 						
 						// Set the default values for cart options for each movie
 						$scope.data.forEach(function(movie) {
-							if (!movie.cartQuantity)
-								movie.cartQuantity = 0;
+							if (!movie.movie_cart_quantity)
+								movie.movie_cart_quantity = 0;
 							movie.addToCartText = "Add to Cart";
 							movie.loadingCartSubmit = false;
 						});
@@ -391,8 +391,8 @@
 						
 						// Set the default values for cart options for each movie
 						$scope.data.forEach(function(movie) {
-							if (!movie.cartQuantity)
-								movie.cartQuantity = 0;
+							if (!movie.movie_cart_quantity)
+								movie.movie_cart_quantity = 0;
 							movie.addToCartText = "Add to Cart";
 							movie.loadingCartSubmit = false;
 						});
@@ -411,27 +411,41 @@
 		 * Adds to the cart quantity for a movie
 		 */
 		$scope.addCartQuantity = function(movie) {
-			if (isNaN(movie.cartQuantity))
-				movie.cartQuantity = 0;
-			movie.cartQuantity = Math.max(parseInt(movie.cartQuantity) + 1, 0);
+			if (isNaN(movie.movie_cart_quantity))
+				movie.movie_cart_quantity = 0;
+			movie.movie_cart_quantity = Math.max(parseInt(movie.movie_cart_quantity) + 1, 0);
 		}
 		
 		/**
 		 * Adds to the cart quantity for a movie
 		 */
 		$scope.subtractCartQuantity = function(movie) {
-			if (isNaN(movie.cartQuantity))
-				movie.cartQuantity = 0;
-			movie.cartQuantity = Math.max(parseInt(movie.cartQuantity) - 1, 0);
+			if (isNaN(movie.movie_cart_quantity))
+				movie.movie_cart_quantity = 0;
+			movie.movie_cart_quantity = Math.max(parseInt(movie.movie_cart_quantity) - 1, 0);
 		}
 		
 		$scope.submitCartQuantity = function(movie) {
-			if (isNaN(movie.cartQuantity))
-				movie.cartQuantity = 0;
+			if (isNaN(movie.movie_cart_quantity))
+				movie.movie_cart_quantity = 0;
+			console.log("cart quant = ", movie.movie_cart_quantity);
 			movie.loadingCartSubmit = true;
 			movie.addToCartText = "Adding to Cart";
-			// TODO: Hook up with backend
-			setTimeout(function(){ movie.loadingCartSubmit = false; movie.addToCartText = "Add to Cart"; }, 1000);
+			
+			// Update the backend table for the user's cart
+			CartService.updateCartData($http, movie.movie_id, movie.movie_cart_quantity)
+				.then(function(success) {
+					if (success) {
+						if ($scope.previousMovieUpdated)
+							$scope.previousMovieUpdated.showUpdate = false;
+						
+						$scope.previousMovieUpdated = movie;
+						movie.showUpdate = true;
+					}
+					movie.loadingCartSubmit = false; 
+					movie.addToCartText = "Add to Cart";
+				}
+			);
 		}
 		
 		/**
@@ -559,7 +573,7 @@
 		}
 	});
 	
-	app.controller('MovieController', function($scope, $rootScope, $stateParams, $state, $http, $window, SearchService) {
+	app.controller('MovieController', function($scope, $rootScope, $stateParams, $state, $http, $window, SearchService, CartService) {
 		$rootScope.title = "Movie";
 		$scope.movieId = $stateParams.movieId;
 		$scope.movieData = null;
@@ -567,13 +581,11 @@
 		
 		$scope.addToCartText = "Add to Cart";
 		$scope.loadingCartSubmit = false;	// is true after clicking "Add to Cart" button
-		$scope.cartQuantity = "0";	// TODO: Hook up w/backend
 		
 		SearchService.getMovieById($http, $scope.movieId)
 			.then(function(data) {
 				if (data) {
 					$scope.movieData = data;
-					console.log(data);
 					
 				} else {
 					$scope.movieData = null;
@@ -586,27 +598,36 @@
 		 * Adds to the cart quantity for a movie
 		 */
 		$scope.addCartQuantity = function() {
-			if (isNaN($scope.cartQuantity))
-				$scope.cartQuantity = 0;
-			$scope.cartQuantity = Math.max(parseInt($scope.cartQuantity) + 1, 0);
+			if (isNaN($scope.movieData.movie_cart_quantity))
+				$scope.movieData.movie_cart_quantity = 0;
+			$scope.movieData.movie_cart_quantity = Math.max(parseInt($scope.movieData.movie_cart_quantity) + 1, 0);
 		}
 		
 		/**
 		 * Adds to the cart quantity for a movie
 		 */
 		$scope.subtractCartQuantity = function() {
-			if (isNaN($scope.cartQuantity))
-				$scope.cartQuantity = 0;
-			$scope.cartQuantity = Math.max(parseInt($scope.cartQuantity) - 1, 0);
+			if (isNaN($scope.movieData.movie_cart_quantity))
+				$scope.movieData.movie_cart_quantity = 0;
+			$scope.movieData.movie_cart_quantity = Math.max(parseInt($scope.movieData.movie_cart_quantity) - 1, 0);
 		}
 		
 		$scope.submitCartQuantity = function() {
-			if (isNaN($scope.cartQuantity))
-				$scope.cartQuantity = 0;
+			if (isNaN($scope.movieData.movie_cart_quantity))
+				$scope.movieData.movie_cart_quantity = 0;
 			$scope.loadingCartSubmit = true;
 			$scope.addToCartText = "Adding to Cart";
-			// TODO: Hook up with backend
-			$window.setTimeout(function(){ $scope.loadingCartSubmit = false; $scope.addToCartText = "Add to Cart"; }, 100);
+			
+			// Update the backend table for the user's cart
+			CartService.updateCartData($http, $scope.movieData.movie_id, $scope.movieData.movie_cart_quantity)
+				.then(function(success) {
+					if (success) {
+						$scope.successUpdateMovie = $scope.movieData.movie_title;
+					}
+					$scope.loadingCartSubmit = false; 
+					$scope.addToCartText = "Add to Cart";
+				}
+			);
 		}
 		
 		/**
@@ -675,133 +696,88 @@
 		}
 	});
 	
-	app.controller('CartController', function($scope, $rootScope, $stateParams, $state, $http, $window, SearchService) {
+	app.controller('CartController', function($scope, $rootScope, $stateParams, $state, $http, $window, CartService) {
 		$rootScope.title = "Cart";
-		/**
-		 * TODO: Replace with real cart data
-		 * 
-		 * JSON format is a list of movie objects with a quantity attribute.
-		 * Updating the chart 
-		 */
-		$scope.cartData = [
-		                   { 
-		                	   movie_banner_url: "https://images-na.ssl-images-amazon.com/images/M/MV5BMTQ3NTIyMzczMF5BMl5BanBnXkFtZTYwMjgzNTg2._V1_.jpg", 
-		                	   movie_year: 2004, 
-		                	   movie_id: 693003, 
-		                	   movie_director: "Christian Morte",
-		                	   movie_genres: ["Comedy", "Sci-Fi", "Romance"],
-		                	   movie_stars: [
-		                	                 {
-		                	                	 star_first_name: "Aishwarya",
-		                	                	 star_id: 140022,
-		                	                	 star_last_name: "Rai"
-		                	                 },
-		                	                 {
-		                	                	 star_first_name: "Aishwarya",
-		                	                	 star_id: 140022,
-		                	                	 star_last_name: "Rai"
-		                	                 }
-		      		           ],
-		                	   movie_title: "Ocean's Twelve",
-		                	   cartQuantity: 2
-		                   },
-		                   { 
-		                	   movie_banner_url: "https://images-na.ssl-images-amazon.com/images/M/MV5BMTQ3NTIyMzczMF5BMl5BanBnXkFtZTYwMjgzNTg2._V1_.jpg", 
-		                	   movie_year: 2004, 
-		                	   movie_id: 693004, 
-		                	   movie_director: "Christian Morte",
-		                	   movie_genres: ["Comedy", "Sci-Fi", "Romance"],
-		                	   movie_stars: [
-		                	                 {
-		                	                	 star_first_name: "Aishwarya",
-		                	                	 star_id: 140022,
-		                	                	 star_last_name: "Rai"
-		                	                 }
-		                	   ],
-		                	   movie_title: "Ocean's Eleven",
-		                	   cartQuantity: 3
-		                   },
-		                   { 
-		                	   movie_banner_url: "https://images-na.ssl-images-amazon.com/images/M/MV5BMTQ3NTIyMzczMF5BMl5BanBnXkFtZTYwMjgzNTg2._V1_.jpg", 
-		                	   movie_year: 2004, 
-		                	   movie_id: 693005, 
-		                	   movie_director: "Christian Morte",
-		                	   movie_genres: ["Comedy", "Sci-Fi", "Romance"],
-		                	   movie_stars: [
-		                	                 {
-		                	                	 star_first_name: "Aishwarya",
-		                	                	 star_id: 140022,
-		                	                	 star_last_name: "Rai"
-		                	                 },
-		                	                 {
-		                	                	 star_first_name: "Aishwarya",
-		                	                	 star_id: 140022,
-		                	                	 star_last_name: "Rai"
-		                	                 },
-		                	                 {
-		                	                	 star_first_name: "Aishwarya",
-		                	                	 star_id: 140022,
-		                	                	 star_last_name: "Rai"
-		                	                 }
-		      		           ],
-		                	   movie_title: "Ocean's Thirteen",
-		                	   cartQuantity: 1
-		                   }
-		]
+		
+		// Load the cart data from the back end
+		$scope.cartLoading = true;
+		CartService.getCartData($http)
+			.then(function(data) {
+				if (data) {
+					$scope.cartData = data.cartData;
+					
+				} else {
+					$scope.cartData = null;
+				}
+				$scope.cartLoading = false;
+			}
+		);
 		
 		/**
 		 * Adds to the cart quantity for a movie
 		 */
 		$scope.addCartQuantity = function(movie) {
-			if (isNaN(movie.cartQuantity))
-				movie.cartQuantity = movie.cartQuantity;
-			movie.cartQuantity = Math.max(parseInt(movie.cartQuantity) + 1, 0);
+			if (isNaN(movie.movie_cart_quantity))
+				movie.movie_cart_quantity = movie.movie_cart_quantity;
+			movie.movie_cart_quantity = Math.max(parseInt(movie.movie_cart_quantity) + 1, 0);
 		}
 		
 		/**
 		 * Adds to the cart quantity for a movie
 		 */
 		$scope.subtractCartQuantity = function(movie) {
-			if (isNaN(movie.cartQuantity))
-				movie.cartQuantity = movie.cartQuantity;
-			movie.cartQuantity = Math.max(parseInt(movie.cartQuantity) - 1, 0);
+			if (isNaN(movie.movie_cart_quantity))
+				movie.movie_cart_quantity = movie.movie_cart_quantity;
+			movie.movie_cart_quantity = Math.max(parseInt(movie.movie_cart_quantity) - 1, 0);
 		}
 		
 		$scope.updateCart = function(movie) {
 			// Remove the movie if the quantity given was 0
-			if (movie.cartQuantity == 0) {
+			if (movie.movie_cart_quantity == 0) {
 				return $scope.removeFromCart(movie);
 			}
 			
-			// TODO: Send HTTP POST Request to update movie quantity using movie.cartQuantity
-			
-			// Hide any previous alerts if there were any
-			$scope.removedMovieTitle = null;
-			$scope.removedMovieID = null;
-			
-			// Show new alert for updated movie
-			$scope.updatedMovieTitle = movie.movie_title;
-			$scope.updatedMovieID = movie.movie_id;
+			// Update the backend table for the user's cart
+			CartService.updateCartData($http, movie.movie_id, movie.movie_cart_quantity)
+				.then(function(success) {
+					if (success) {
+						// Hide any previous alerts if there were any
+						$scope.removedMovieTitle = null;
+						$scope.removedMovieID = null;
+						
+						// Show new alert for updated movie
+						$scope.updatedMovieTitle = movie.movie_title;
+						$scope.updatedMovieID = movie.movie_id;
+					}
+				}
+			);
 		}
 		
 		/**
 		 * Removes a movie from the cart
 		 */
 		$scope.removeFromCart = function(movie) {
-			// TODO: Sent an HTTP Post request to remove the movie, replace implementation below
+			// Update the backend table for the user's cart
+			CartService.updateCartData($http, movie.movie_id, 0)
+				.then(function(success) {
+					if (success) {
+						// Hide any previous alerts if there were any
+						$scope.updatedMovieTitle = null;
+						$scope.updatedMovieID = null;
+						
+						// Show new alert for removed movie
+						$scope.removedMovieTitle = movie.movie_title;
+						$scope.removedMovieID = movie.movie_id;
+					}
+				}
+			);
 			
 			// Simulates removing a movie from the cart
 			var index = $scope.cartData.indexOf(movie);
 			if (index > -1) {
 				$scope.cartData.splice(index, 1);
 				
-				// Hide any previous alerts if there were any
-				$scope.updatedMovieTitle = null;
-				$scope.updatedMovieID = null;
-				
-				// Show new alert for removed movie
-				$scope.removedMovieTitle = movie.movie_title;
-				$scope.removedMovieID = movie.movie_id;
+
 			}
 		}
 		
@@ -885,6 +861,40 @@
 			},
 			isAuthenticated : function() {
 				return data !== null;
+			}
+		};
+	});
+	
+	app.factory('CartService', function() {
+		return {
+			getCartData: function($http) {
+				// HTTP GET runs asnychronously
+				return $http({
+					method: 'GET',
+					url: 'http://localhost:8080/FabFlix/servlet/FabFlixCartServlet',	
+					params: { 
+						action_type: "GET_CART"
+					}
+				}).then(function successCallback(response) {
+					return response.data;
+				}, function errorCallback(response) {
+					return null;
+				});
+			},
+			updateCartData: function($http, movieID, amount) {
+				return $http({
+					method: 'POST',
+					url: 'http://localhost:8080/FabFlix/servlet/FabFlixCartServlet',	
+					params: { 
+						action_type: "UPDATE_CART",
+						movieId: movieID,
+						amount: amount
+					}
+				}).then(function successCallback(response) {
+					return response.data.success;
+				}, function errorCallback(response) {
+					return null;
+				});
 			}
 		};
 	});

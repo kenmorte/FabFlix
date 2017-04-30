@@ -39,6 +39,7 @@
 	
 	
 	<div class="container">
+	
 		<h3>Search Results: {{query_display}}</h3>
 		<hr />
 		
@@ -160,7 +161,7 @@
 							     		<span class="input-group-btn">
 							        		<button class="btn btn-primary" type="button" ng-click="subtractCartQuantity(movie)">-</button>
 							      		</span>
-							      		<input id="quantity" ng-model="movie.cartQuantity" type="text" class="form-control" style="text-align: center;">
+							      		<input id="quantity" ng-model="movie.movie_cart_quantity" type="text" class="form-control" style="text-align: center;">
 							     		<span class="input-group-btn">
 							        		<button class="btn btn-primary" type="button" ng-click="addCartQuantity(movie)">+</button>
 							      		</span>
@@ -177,6 +178,12 @@
 							    	</div>
 							  	</div>
 						  	</div>
+						</li>
+						<li>
+							<!-- Notification for adding a movie to the cart -->
+							<div class="alert alert-success" ng-show="movie.showUpdate" style="margin-top: 20px;">
+								<strong>Success</strong>: Updated your cart quantity for the movie <i>{{movie.movie_title}}</i>!
+							</div>
 						</li>
 					</ul>
 				</div>
