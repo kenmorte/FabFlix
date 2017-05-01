@@ -1,6 +1,6 @@
 (function() {
 	// Initialize our app module
-	var app = angular.module('FabFlix', ['ui.router']);
+	var app = angular.module('FabFlix', ['ui.router','ngCookies']);
   
   // http://stackoverflow.com/questions/19254029/angularjs-http-post-does-not-send-data/35699599
 	angular.module('FabFlix')
@@ -10,10 +10,24 @@
 	});
 	
 	// Initializing our app (rootScope)
-	app.run(function($rootScope, $location, $state, LoginService) {
+	app.run(function($rootScope, $location, $state, $cookies, LoginService) {
 		$rootScope.$on('$stateChangeStart', 
 			function(event, toState, toParams, fromState, fromParams){ 
 				console.log('Changed state to: ' + toState);
+				
+				// If user is still logged in, keep in home if they decide to refresh
+				if (!$rootScope.user && toState.name != 'login') {
+					event.preventDefault();
+					
+					if (!$cookies.getObject("user")) {
+						$state.transitionTo('login');
+						return;
+					}
+					
+					$rootScope.user = $cookies.getObject('user');
+					$state.go('home', {userData: $rootScope.user});
+					return;
+				}
 			}
 		);
 		
@@ -40,7 +54,8 @@
 				controller : 'HomeController',
 				params: {
 					userData: null,
-					confirmationMessage: null
+					confirmationMessage: null,
+					confirmationMessageClass: null
 				}
 			})
 			.state('results', {
@@ -102,9 +117,10 @@
 		}]
 	);
 
-	app.controller('LoginController', function($scope, $rootScope, $stateParams, $state, $http, LoginService) {
+	app.controller('LoginController', function($scope, $rootScope, $stateParams, $state, $http, $cookies, LoginService) {
 		$rootScope.title = "FabFlix Login";
 		$scope.loggingIn = false;
+		$cookies.putObject('user', null);
 
 		// Called after user attempts to log in
 		$scope.formSubmit = function() {
@@ -117,6 +133,7 @@
 						$scope.email = '';
 						$scope.password = '';
 						$rootScope.user = data.user;
+						$cookies.putObject('user', $rootScope.user);
 					$state.go('home', {userData: data.user});
     
 					} else {
@@ -144,6 +161,10 @@
 		$scope.showError = false;
 		
 		$scope.confirmationMessage = $stateParams.confirmationMessage;	// for when user comes from a checkout page
+		
+		if ($stateParams.confirmationMessageClass)
+			angular.element( document.querySelector( '#confirmationText' ) )
+				.addClass($stateParams.confirmationMessageClass);
 		
 		$scope.searchSubmit = function() {
 			$scope.showError = !$scope.movieTitle && !$scope.year 
@@ -575,6 +596,7 @@
 	
 	app.controller('MovieController', function($scope, $rootScope, $stateParams, $state, $http, $window, SearchService, CartService) {
 		$rootScope.title = "Movie";
+		$scope.userData = $stateParams.userData;
 		$scope.movieId = $stateParams.movieId;
 		$scope.movieData = null;
 		$scope.loading = true;
@@ -654,7 +676,6 @@
 		}
 		
 		$scope.onStarClicked = function(star_id) {
-			console.log(star_id);
 			$state.go('star', {
 				userData: $scope.userData,
 				starId: star_id
@@ -668,6 +689,7 @@
 	
 	app.controller('StarController', function($scope, $rootScope, $stateParams, $state, $http, $window, SearchService) {
 		$rootScope.title = "Star";
+		$scope.userData = $stateParams.userData;
 		$scope.starId = $stateParams.starId;
 		$scope.starData = null;
 		$scope.loading = true;
@@ -698,6 +720,7 @@
 	
 	app.controller('CartController', function($scope, $rootScope, $stateParams, $state, $http, $window, CartService) {
 		$rootScope.title = "Cart";
+		$scope.userData = $stateParams.userData;
 		
 		// Load the cart data from the back end
 		$scope.cartLoading = true;
@@ -801,8 +824,9 @@
 	});
 	
 	
-	app.controller('CheckoutController', function($scope, $rootScope, $stateParams, $state, $http, $window, SearchService) {
+	app.controller('CheckoutController', function($scope, $rootScope, $stateParams, $state, $http, $window, CartService) {
 		$rootScope.title = "Checkout";
+		$scope.userData = $stateParams.userData;
 		
 		$scope.errorFieldEmpty = false;	// error for not filling out all fields
 		$scope.errorCheckout = false;	// error for unsuccessful checkout
@@ -822,23 +846,64 @@
 				return;
 			}
 			
+			$scope.errorFieldEmpty = false;
+			
 			// TODO: Do HTTP POST here for sending info to backend
+			$scope.loadingCheckout = true;
+			CartService.validateCreditCardInfo($http, 
+					$scope.firstName, $scope.lastName, 
+					$scope.creditCardNumber, 
+					$scope.expirationYear + "-" + $scope.expirationMonth + "-" + $scope.expirationDay)
+				.then(function(data) {
+					if (data) {
+						if (data.success) {
+							var today = new Date();
+							var totalTransactionsToDo = 0;
+							var totalTransactionsAttempted = 0;
+							var confirmationMessageClass = "alert-success";
+							
+							$scope.cartData.forEach(function(movie) {
+								totalTransactionsToDo += movie.movie_cart_quantity;
+							});
+							var confirmationMessage = "You have completed your transaction of " + totalTransactionsToDo + " movies!"; 
+							
+							$scope.cartData.forEach(function(movie) {
+								for (var i = 0; i < movie.movie_cart_quantity; i++) {
+									CartService.submitCartData($http,
+											$rootScope.user.id,
+											movie.movie_id,
+											today.getFullYear()+'-'+(today.getMonth()+1)+'-'+today.getDate())
+										.then(function(transactionData) {
+											totalTransactionsAttempted++;
+											
+											if (!transactionData || (transactionData && !transactionData.success)) {
+												confirmationMessageClass = "alert-danger";
+												confirmationMessage = "You may have one or more uncompleted transactions, so please check your cart to see the leftover movies.";
+											}
+											if (totalTransactionsAttempted == totalTransactionsToDo) {
+												$scope.loadingCheckout = false;
+												$state.go('home', {
+													confirmationMessageClass: confirmationMessageClass,
+													confirmationMessage: confirmationMessage
+												});
+											}
+										}
+									);
+								}
+							});
+						} else {
+							$scope.wrongInformationErrorMessage = data.message;
+							$scope.loadingCheckout = false;
+						}
+						
+					} else {
+						$scope.noResponseError = true;
+						$scope.loadingCheckout = false;
+					}
+				}
+			);
 			// TODO: If failure, show error at the top of this screen
 			// TODO: If success, lead to confirmation page
-			
-			// TODO: Delete this placeholder implementation
-			$scope.loadingCheckout = true;
-			$window.setTimeout(function() { 
-				$scope.loadingCheckout = false;
-				
-				$state.go('home', {
-					userData: $scope.userData,
-					confirmationMessage: "You have successfully checked out the movies!"	// TODO: Connect w/backend message
-				});
-				
-				
-			}, 1000);
-			
 		}
 	});
   
@@ -892,6 +957,40 @@
 					}
 				}).then(function successCallback(response) {
 					return response.data.success;
+				}, function errorCallback(response) {
+					return null;
+				});
+			},
+			validateCreditCardInfo: function($http, firstName, lastName, creditCardNumber, creditCardExpiration) {
+				return $http({
+					method: 'POST',
+					url: 'http://localhost:8080/FabFlix/servlet/FabFlixCartServlet',	
+					params: { 
+						action_type: "VALIDATE_CREDIT_CARD",
+						first_name: firstName,
+						last_name: lastName,
+						credit_card_number: creditCardNumber,
+						credit_card_expiration: creditCardExpiration
+					}
+				}).then(function successCallback(response) {
+					return response.data;
+				}, function errorCallback(response) {
+					return null;
+				});
+			},
+			submitCartData: function($http, customerId, movieId, transactionDate) {
+				return $http({
+					method: 'POST',
+					url: 'http://localhost:8080/FabFlix/servlet/FabFlixCartServlet',	
+					params: { 
+						action_type: "CART_TRANSACTION",
+						customerId: customerId,
+						movieId: movieId,
+						transactionDate: transactionDate
+					}
+				}).then(function successCallback(response) {
+					console.log("response = ", response);
+					return response.data;
 				}, function errorCallback(response) {
 					return null;
 				});

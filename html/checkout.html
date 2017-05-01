@@ -48,6 +48,16 @@
 		<div class="alert alert-danger" ng-show="!cartData">
 			<strong>Error</strong>: No cart data detected! Cannot proceed with checkout.
 		</div>
+		
+		<!-- Notification for no response from server -->
+		<div class="alert alert-danger" ng-show="noResponseError">
+			<strong>Error</strong>: Unable to receive response from server. Please try again.
+		</div>
+		
+		<!-- Notification for no response from server -->
+		<div class="alert alert-danger" ng-show="wrongInformationErrorMessage">
+			<strong>Error</strong>: {{wrongInformationErrorMessage}}
+		</div>
 	
 		<h3>Checkout</h3>
 		<hr />

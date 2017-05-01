@@ -771,6 +771,119 @@ public class FabFlixRESTManager
 	}
 	
 	/**
+	 * Returns a JSON response from validating credit card information provided from user.
+	 * The format for the response is as follows:
+	 * {
+	 * 		"success": true or false, depending if the information is correct
+	 * 		"message": message for the response, following more information after the attempt
+	 * }
+	 * 
+	 * @param firstName	first name for the credit card information
+	 * @param lastName	last name for the credit card information
+	 * @param creditCardNumber	credit card ID from the database
+	 * @param creditCardExpiration	expiration date for the credit card
+	 * @return	JSON response of whether the information provided was correct or not
+	 * @throws SQLException	if there was an error in the SQL command or the ID was null
+	 * @throws JSONException	if there was an error parsing the resulting JSON object
+	 */
+	public JSONObject validateCreditCardInfo(
+		String firstName, String lastName,
+		String creditCardNumber,
+		String creditCardExpiration) throws SQLException, JSONException {
+		
+		if (firstName == null)
+			throw new SQLException("No first name provided for validating credit card information!");
+		if (lastName == null)
+			throw new SQLException("No last name provided for validating credit card information!");
+		if (creditCardNumber == null)
+			throw new SQLException("No credit card number provided for validating credit card information!");
+		if (creditCardExpiration == null)
+			throw new SQLException("No credit card expiration provided for validating credit card information!");
+		
+		Statement statement;
+		ResultSet result;
+		JSONObject json;
+		
+		statement = mDatabase.createStatement();
+		result = statement.executeQuery("select * from creditcards" +
+				" where id = \"" + creditCardNumber + "\" and" +
+				" first_name = \"" + firstName + "\" and" +
+				" last_name = \"" + lastName + "\" and" +
+				" expiration = \"" + creditCardExpiration + "\""
+		);
+		json = new JSONObject();
+		
+		if (result.next()) {
+			json.put("success", true);
+			json.put("message", "Successfully validated credit card information!");
+		}
+		else {
+			json.put("success", false);
+			json.put("message", "Credit card information did not match any information in database. Please try again.");
+		}
+		
+		return json;
+	}
+	
+	/**
+	 * Returns a JSON response from completing transaction for a movie from a user.
+	 * The format for the response is as follows:
+	 * {
+	 * 		"success": true or false, depending if transaction was successful or not
+	 * 		"message": message for the response, following more information after the transaction
+	 * }
+	 * 
+	 * @param customerId	customer's ID for the transaction
+	 * @param movieId	movie ID for the movie being sold
+	 * @param transactionDate	date transaction took place
+	 * @return	JSON response of whether the transaction was successful and message
+	 * @throws SQLException	if there was an error in the SQL command or the ID was null
+	 * @throws JSONException	if there was an error parsing the resulting JSON object
+	 */
+	public JSONObject submitMovieSale(
+		String sessionId,
+		String customerId, 
+		String movieId, 
+		String transactionDate) throws SQLException, JSONException {
+		
+		if (customerId == null)
+			throw new SQLException("No customer ID provided for submitting movie sale!");
+		if (movieId == null)
+			throw new SQLException("No movie ID provided for submitting movie sale!");
+		if (transactionDate == null)
+			throw new SQLException("No transaction date provided for submitting movie sale!");
+		
+		Statement statement;
+		Integer success;
+		JSONObject json;
+		statement = mDatabase.createStatement();
+		System.out.println("insert into sales values(DEFAULT," + 
+				" \"" + customerId + "\"," + 
+				" \"" + movieId + "\"," + 
+				" \"" + transactionDate + "\")");
+		success = statement.executeUpdate("insert into sales values(DEFAULT," + 
+				" \"" + customerId + "\"," + 
+				" \"" + movieId + "\"," + 
+				" \"" + transactionDate + "\")"
+		);
+		json = new JSONObject();
+		
+		if (success <= 0) {
+			json.put("success", false);
+			json.put("message", "Unable to complete transaction for movie with ID (" + movieId + ")!");
+			
+		} else {
+			json.put("success", true);
+			json.put("message", "Successfully completed transaction for movie with ID (" + movieId + ")!");
+			
+			// Delete the movie from the cart, it has completed its transaction
+			statement.executeUpdate("delete from carts where session_id = \"" + sessionId + "\" and movie_id = \"" + movieId + "\"");
+		}
+		System.out.println(json.toString());
+		return json;
+	}
+	
+	/**
 	 * Gets the where clause for substring matching given the following parameters.
 	 * If all the parameters are null, then the output is an empty string.
 	 * 

@@ -27,9 +27,24 @@ public class FabFlixCartServlet extends HttpServlet {
 	 * @see HttpServlet#doGet(HttpServletRequest request, HttpServletResponse response)
 	 */
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+		// Action type of the request
 		String actionType = request.getParameter("action_type");
+		
+		// For updating cart information
 		String movieId = request.getParameter("movieId");
 		String amount = request.getParameter("amount");
+		
+		// For validating credit card information
+		String firstName = request.getParameter("first_name");
+		String lastName = request.getParameter("last_name");
+		String creditCardNumber = request.getParameter("credit_card_number");
+		String creditCardExpiration = request.getParameter("credit_card_expiration");
+		
+		// For cart transactions
+		String customerId = request.getParameter("customerId");
+		String transactionDate = request.getParameter("transactionDate");
+		
+		// For updating/receiving cart information
 		String sessionId = request.getSession(true).getId();
 		
 		if (actionType == null)
@@ -53,7 +68,22 @@ public class FabFlixCartServlet extends HttpServlet {
 	    		);
     		else if (actionType.equalsIgnoreCase("GET_CART"))
 	    		result = restManager.getCartData(sessionId);
-
+    		else if (actionType.equalsIgnoreCase("VALIDATE_CREDIT_CARD"))
+    			result = restManager.validateCreditCardInfo(
+    				firstName, 
+    				lastName, 
+    				creditCardNumber, creditCardExpiration
+    			);
+    		else if (actionType.equalsIgnoreCase("CART_TRANSACTION")) {
+    			result = restManager.submitMovieSale(
+    				sessionId,
+    				customerId, 
+    				movieId, 
+    				transactionDate
+    			);
+    		}
+    		
+    		System.out.println(result.toString());
     		if (out.toString().isEmpty())
     			out.write(result.toString());
     		restManager.closeConnection();

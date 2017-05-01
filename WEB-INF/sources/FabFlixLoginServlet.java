@@ -32,7 +32,7 @@ public class FabFlixLoginServlet extends HttpServlet {
     		
     		result.put("error", "null");
     		if (userJSON != null) {
-        		result.put("user", userJSON.toString());
+        		result.put("user", userJSON);
         		result.put("message", "success");
         		
     		} else {
