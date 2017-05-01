@@ -13,10 +13,14 @@
 	app.run(function($rootScope, $location, $state, $cookies, LoginService) {
 		$rootScope.$on('$stateChangeStart', 
 			function(event, toState, toParams, fromState, fromParams){ 
-				console.log('Changed state to: ' + toState);
-				
+			}
+		);
+		
+		// If the user refreshes the page. take them back to login
+		$rootScope.$on("$locationChangeStart", function(event, next, current) { 
+			if(next == current) {
 				// If user is still logged in, keep in home if they decide to refresh
-				if (!$rootScope.user && toState.name != 'login') {
+				if (!$rootScope.user && next != '/login') {
 					event.preventDefault();
 					
 					if (!$cookies.getObject("user")) {
@@ -29,7 +33,7 @@
 					return;
 				}
 			}
-		);
+		});
 		
 		$rootScope.offset = 0;	// by default, we look at the first search results from the home controller
 		$rootScope.limit = 10;	// by default, we limit the search results to 10 per page from the home controller
@@ -113,6 +117,14 @@
 					userData: null,
 					cartData: null
 				}
+			})
+			.state('readme', {
+				url: '/reports/readme',
+				templateUrl: 'reports/readme'
+			})
+			.state('like-predicate', {
+				url: '/reports/like-predicate',
+				templateUrl: 'reports/like-predicate'
 			})
 		}]
 	);
