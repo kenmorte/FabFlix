@@ -1,0 +1,11 @@
+The LIKE predicate is used inside the FabFlixRESTManager Java class. Particularly, is used inside the following:
+	- searching for movies by first character using the predicate "CHARCTER%" where CHARACTER represents the single
+	character for the query
+	- substring matching from the general search parameter query by having the predicate as "%PARAMETER%" where
+	parameter represents whatever parameter was used in the search
+		- eg. for searching by the title, the predicate looked like "%TITLE%"
+		- eg. for searching by director, the predicate looked like "%DIRECTOR%"
+		- eg. for searching by both title and director, the predicate looked like
+		`where title LIKE "%TITLE%" and director LIKE "%DIRECTOR%"
+	- in all of the above queries to find the number of total results using the same query
+	

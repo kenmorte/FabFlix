@@ -10,6 +10,10 @@ import org.json.*;
 
 
 public class FabFlixLoginServlet extends HttpServlet {
+	
+	public static final String SITE_KEY ="6Leu5iAUAAAAAFdRxiacm59jkVVNCb9nV1wWNZiR";
+    public static final String SECRET_KEY ="6Leu5iAUAAAAAKLfQs7_is6cwOwbGANo_-gyHpf4";
+	
     public String getServletInfo() {
         return "Servlet connects to MySQL database and authenticates user login";
     }
@@ -19,12 +23,25 @@ public class FabFlixLoginServlet extends HttpServlet {
             throws IOException, ServletException {
     	String email = request.getParameter("email");
     	String password = request.getParameter("password");
+    	String recaptchaResponse = request.getParameter("recaptchaResponse");
     	StringWriter out = new StringWriter();
     	JSONObject result = new JSONObject();
     	FabFlixRESTManager restManager;
     	
     	response.setContentType("application/json");
         response.setCharacterEncoding("UTF-8");
+    	response.addHeader("Access-Control-Allow-Origin","*");
+    	response.addHeader("Access-Control-Allow-Methods","GET,POST");
+        response.addHeader("Access-Control-Allow-Headers","Origin, X-Requested-With, Content-Type, Accept");
+        
+    	// Verify CAPTCHA.
+    	if (!FabFlixVerifyUtils.verify(recaptchaResponse)) {
+    	    out.write("{\"error\": \"Recaptcha Error\", \"message\": \"Recaptcha unverified. Please try again.\"}");
+    	    response.getWriter().write(out.toString() + "\n");
+        	out.close();
+    	    return;
+    	}
+        
     	try {
     		restManager = new FabFlixRESTManager(out);
     		restManager.attemptConnection();
@@ -48,10 +65,6 @@ public class FabFlixLoginServlet extends HttpServlet {
     		out.flush();
     		out.write("{ \"error\": \"" + e.getClass().getName() + "\", \"message\": \"" + e.getMessage() + "\" }");
     	}
-    	
-    	response.addHeader("Access-Control-Allow-Origin","*");
-    	response.addHeader("Access-Control-Allow-Methods","GET,POST");
-        response.addHeader("Access-Control-Allow-Headers","Origin, X-Requested-With, Content-Type, Accept");
     	
     	response.getWriter().write(out.toString() + "\n");
     	out.close();

@@ -1,6 +1,6 @@
 (function() {
 	// Initialize our app module
-	var app = angular.module('FabFlix', ['ui.router','ngCookies']);
+	var app = angular.module('FabFlix', ['ui.router','ngCookies','vcRecaptcha']);
   
   // http://stackoverflow.com/questions/19254029/angularjs-http-post-does-not-send-data/35699599
 	angular.module('FabFlix')
@@ -13,10 +13,14 @@
 	app.run(function($rootScope, $location, $state, $cookies, LoginService) {
 		$rootScope.$on('$stateChangeStart', 
 			function(event, toState, toParams, fromState, fromParams){ 
-				console.log('Changed state to: ' + toState);
-				
+			}
+		);
+		
+		// If the user refreshes the page. take them back to login
+		$rootScope.$on("$locationChangeStart", function(event, next, current) { 
+			if(next == current) {
 				// If user is still logged in, keep in home if they decide to refresh
-				if (!$rootScope.user && toState.name != 'login') {
+				if (!$rootScope.user && next != '/login') {
 					event.preventDefault();
 					
 					if (!$cookies.getObject("user")) {
@@ -29,7 +33,7 @@
 					return;
 				}
 			}
-		);
+		});
 		
 		$rootScope.offset = 0;	// by default, we look at the first search results from the home controller
 		$rootScope.limit = 10;	// by default, we limit the search results to 10 per page from the home controller
@@ -114,10 +118,18 @@
 					cartData: null
 				}
 			})
+			.state('readme', {
+				url: '/reports/readme',
+				templateUrl: 'reports/readme'
+			})
+			.state('like-predicate', {
+				url: '/reports/like-predicate',
+				templateUrl: 'reports/like-predicate'
+			})
 		}]
 	);
 
-	app.controller('LoginController', function($scope, $rootScope, $stateParams, $state, $http, $cookies, LoginService) {
+	app.controller('LoginController', function($scope, $rootScope, $stateParams, $state, $http, $cookies, $window, vcRecaptchaService, LoginService) {
 		$rootScope.title = "FabFlix Login";
 		$scope.loggingIn = false;
 		$cookies.putObject('user', null);
@@ -126,7 +138,7 @@
 		$scope.formSubmit = function() {
 			$scope.loggingIn = true;
   
-			LoginService.login($http, $scope.email, $scope.password)
+			LoginService.login($http, $scope.email, $scope.password, $scope.recaptchaResponse)
 				.then(function(data) {
 					if (data && data.error == "null" && data.message == "success" && data.user != "null") {
 						$scope.error = '';
@@ -911,12 +923,12 @@
 		var data = null;
   
 		return {
-			login : function($http, email, password) {
+			login : function($http, email, password, recaptchaResponse) {
 				// HTTP POST runs asnychronously
 				return $http({
 					method: 'POST',
 					url: 'http://localhost:8080/FabFlix/servlet/FabFlixLoginServlet',
-					data: { email: email, password: password }
+					data: { email: email, password: password, recaptchaResponse: (recaptchaResponse ? recaptchaResponse : null) }
 				}).then(function successCallback(response) {
 					data = response.data;
 					return response.data;

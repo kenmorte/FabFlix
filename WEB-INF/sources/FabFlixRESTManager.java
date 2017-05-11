@@ -933,7 +933,7 @@ public class FabFlixRESTManager
 	 * @param error	name of the error occurred
 	 * @param message	message for the corresponding error
 	 */
-	private void writeJSONErrorMessage(String error, String message) {
+	public void writeJSONErrorMessage(String error, String message) {
 		writeErrorMessage("{\"error\":\"" + error + "\", \"message\": \"" + message + "\"}");
 	}
 }

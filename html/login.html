@@ -16,8 +16,10 @@
       		<input type="password" class="form-control" ng-model="password" placeholder="Password" required=""/>
       	</div>
       </div>
-
+	
       <div class="form-group">
+      	<div vc-recaptcha key="'6Leu5iAUAAAAAFdRxiacm59jkVVNCb9nV1wWNZiR'" ng-model="recaptchaResponse"></div>
+      	<br />
         <button ng-disabled="loggingIn" type="submit" class="btn btn-block btn-primary start" id="loginButton">
         	<span ng-show="loggingIn">Logging in</span>
         	<span ng-hide="loggingIn">Login</span>

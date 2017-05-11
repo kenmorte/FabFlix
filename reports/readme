@@ -1,0 +1,7 @@
+***** IMPORTANT: After downloading the WAR file from EEE, rename the WAR file to "FabFlix.war"! This is a crucial step. *****
+
+1. Put the .war file in the ~/tomcat/webapps/ folder.
+2. To compile the Java source files, make sure that Tomcat creates the FabFlix folder from the WAR file.
+3. Inside the FabFlix folder, go into the WEB-INF/sources folder.
+4. Run the command `javac -cp $CLASSPATH:../lib/* *` in the following directory.
+5. Move all the following class files inside the WEB-INF/sources folder to the WEB-INF/classes folder using the command `mv *.class ../classes`.
