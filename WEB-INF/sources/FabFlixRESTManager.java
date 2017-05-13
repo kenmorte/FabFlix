@@ -123,6 +123,36 @@ public class FabFlixRESTManager
 	}
 	
 	/**
+	 * Validates a login for a dashboard user. The JSON format is as follows:
+	 * 
+	 * {
+	 * 	"success": true or false, depending if the email or password were successful
+	 * }
+	 * 
+	 * @param email	employee's email
+	 * @param password	employee's password
+	 * @return	JSON object containing a "success" attribute
+	 * @throws SQLException		when there is an issue accessing/querying the database 
+	 * @throws JSONException	when JSON is failed to parse
+	 */
+	public JSONObject getDashboardLogin(String email, String password) throws SQLException, JSONException {
+		if (email == null || password == null) {
+			writeErrorMessage("{\"error\": \"DashboardLoginException\", \"message\": \"No email and/or password provided!\"}");
+			return null;
+		}
+		
+		Statement select;
+		ResultSet result;
+		JSONObject json = null;
+		
+		json = new JSONObject();
+		select = mDatabase.createStatement();
+		result = select.executeQuery("select * from employees where email=\"" + email + "\" and password=\"" + password + "\"");
+		json.put("success", result.next());
+		return json;
+	}
+	
+	/**
 	 * Retrieves a JSON object of movies given the first character of the title.
 	 * If no movies were found, then the corresponding JSON array is an empty list.
 	 * Otherwise, the list contains JSONObjects of resulting movies.
@@ -857,10 +887,6 @@ public class FabFlixRESTManager
 		Integer success;
 		JSONObject json;
 		statement = mDatabase.createStatement();
-		System.out.println("insert into sales values(DEFAULT," + 
-				" \"" + customerId + "\"," + 
-				" \"" + movieId + "\"," + 
-				" \"" + transactionDate + "\")");
 		success = statement.executeUpdate("insert into sales values(DEFAULT," + 
 				" \"" + customerId + "\"," + 
 				" \"" + movieId + "\"," + 
@@ -879,7 +905,205 @@ public class FabFlixRESTManager
 			// Delete the movie from the cart, it has completed its transaction
 			statement.executeUpdate("delete from carts where session_id = \"" + sessionId + "\" and movie_id = \"" + movieId + "\"");
 		}
-		System.out.println(json.toString());
+		return json;
+	}
+	
+	/**
+	 * Inserts a star into the movie database. If an error occurs while inserting a star,
+	 * then the JSON format includes an error attribute as well. The format follows:
+	 * 
+	 * {
+	 * 	"success": true or false, depending if insertion was successful or not,
+	 * 	"error": message for the error if the operation was unsuccessful
+	 * }
+	 * 
+	 * @param firstName	first name of the star
+	 * @param lastName	last name of the star
+	 * @param dob	date of birth for the star
+	 * @param photoURL	URL linking to a photo of the star
+	 * @return	output JSON if the insertion was a success or not
+	 * @throws SQLException	if there was an error in the SQL command or the ID was null
+	 * @throws JSONException	if there was an error parsing the resulting JSON object
+	 */
+	public JSONObject insertStar(
+		String firstName, String lastName, 
+		String dob, 
+		String photoURL) throws SQLException, JSONException {
+		if (lastName == null || lastName.isEmpty())
+			throw new SQLException("No last name provided for submitting movie sale!");
+		if (firstName == null)
+			firstName = "";
+		
+		JSONObject json;
+		String insertStatement;
+		Statement insert;
+		ResultSet result;
+		
+		insertStatement = "insert into stars values(DEFAULT" + 
+				",\"" + firstName + "\"" +
+				",\"" + lastName + "\"" +
+				"," + (dob == null ? "NULL" : "\"" + dob + "\"") +
+				"," + (photoURL == null || photoURL.isEmpty() ? "\"\"" : "\"" + photoURL + "\"") + ")";
+		json = new JSONObject();
+		
+		try {
+			insert = mDatabase.createStatement();
+			insert.executeUpdate(insertStatement,Statement.RETURN_GENERATED_KEYS);
+			result = insert.getGeneratedKeys();
+			
+			if (result != null && result.next()) {
+				int newStarID = result.getInt(1);
+				json.put("success", true);
+				json.put("star_id", newStarID);
+				result.close();
+			}
+			else {
+				json.put("success", false);
+				json.put("error", "Error inserting star into database. Please try again.");
+			}
+			
+			insert.close();
+			
+		} catch (Exception e) {
+			json.put("success", false);
+			json.put("error", e.getMessage());
+		}
+		return json;
+	}
+	
+	/**
+	 * Output a JSON of the database meta-data information onto a JSON file. If
+	 * an error occurred, the "error" attribute is included. The format follows:
+	 * 
+	 * {
+	 * 	"success": true or false, depending if operation was successful or not,
+	 * 	"error": message for the error if the operation was unsuccessful
+	 * }
+	 * 
+	 * @return	JSON object with the values specified above
+	 * @throws SQLException	if there was an error in the SQL command or the ID was null
+	 * @throws JSONException	if there was an error parsing the resulting JSON object
+	 */
+	public JSONObject getMetaData() throws JSONException {
+		JSONObject result = new JSONObject();
+		
+		try {
+			// thanks to: http://tutorials.jenkov.com/jdbc/databasemetadata.html
+			DatabaseMetaData metadata = mDatabase.getMetaData();
+			ResultSet tables = metadata.getTables(null, null, null, null);
+			JSONArray tableArray = new JSONArray();
+			JSONObject json;
+			ResultSet columns;
+			
+			while (tables.next()) {
+				json = new JSONObject();
+				// Table name located at column 3 of meta-data table info
+				String tableName = tables.getString(3);
+				json.put("tableName", tableName);
+				
+				columns = metadata.getColumns(null, null, tableName, null);
+				String columnString = "";
+				while (columns.next()) {
+					// Column name and type located at columns 4 and 5 of meta-data column info
+					String columnName = columns.getString(4);
+					String columnType = getColumnTypeName(columns.getInt(5));
+					
+					columnString += columnName + " (" + columnType + "), ";
+				}
+				columnString = columnString.substring(0, columnString.length()-2);
+				json.put("columns", columnString);
+				tableArray.put(json);
+				columns.close();
+			}
+			
+			tables.close();
+			result.put("metadata", tableArray);
+			result.put("success", true);
+			
+		} catch (Exception e) {
+			result.put("success", false);
+			result.put("error", e.getMessage());
+		}
+		return result;
+	}
+	
+	/**
+	 * Output a JSON from an operation of adding a movie onto the database.
+	 * The format follows
+	 * 
+	 * {
+	 * 	"success": true or false, depending if operation was successful or not,
+	 * 	"message": message for the operation
+	 * }
+	 * 
+	 * @param title	title parameter for a movie
+	 * @param year	year parameter for when movie is released
+	 * @param director	director parameter for movie
+	 * @param firstName	first name parameter for a star in a movie
+	 * @param lastName	last name parameter for a star in a movie
+	 * @param genre 	genre of the movie
+	 * @return	JSON object with the values specified above
+	 * @throws SQLException	if there was an error in the SQL command or the ID was null
+	 * @throws JSONException	if there was an error parsing the resulting JSON object
+	 */
+	public JSONObject addMovie(
+		String title, String year, String director,
+		String firstName, String lastName,
+		String genre) throws JSONException, SQLException {
+		if (title == null)
+			throw new SQLException("No movie title provided for adding movie!");
+		if (year == null)
+			throw new SQLException("No movie year provided for adding movie!");
+		if (director == null)
+			throw new SQLException("No movie director provided for adding movie!");
+		if (lastName == null)
+			throw new SQLException("No star last name provided for adding movie!");
+		if (genre == null)
+			throw new SQLException("No movie genre provided for adding movie!");
+		if (firstName == null)
+			firstName = "";
+		
+		String error;
+		Statement statement;
+		JSONObject json;
+		ResultSet result;
+		statement = mDatabase.createStatement(); 
+		json = new JSONObject();
+		System.out.println("call add_movie(\"" 
+				+ title + "\"," + 
+				"" + year + "," + 
+				"\"" + director +  "\"," + 
+				"\"" + firstName + "\"," + 
+				"\"" + lastName + "\"," + 
+				"\"" + genre + "\")");
+		result = statement.executeQuery("call add_movie(\"" 
+			+ title + "\"," + 
+			"" + year + "," + 
+			"\"" + director +  "\"," + 
+			"\"" + firstName + "\"," + 
+			"\"" + lastName + "\"," + 
+			"\"" + genre + "\")");
+		
+		if (result.next()) {
+			json.put("success", result.getBoolean(1));
+			error = "Items added: ";
+			if (result.getBoolean(2))
+				error += "Movie with title \"" + title + "\", ";
+			if (result.getBoolean(3))
+				error += "Star with name \"" + firstName + " " + lastName + "\", ";
+			if (result.getBoolean(4))
+				error += "Genre with name \"" + genre + "\", ";
+			if (result.getBoolean(5))
+				error += "Star associated with name \"" + firstName + " " + lastName + "\", ";
+			if (result.getBoolean(6))
+				error += "Genre with name \"" + genre + "\", ";
+			if (error.equals("Items added: "))
+				error = "No items added for operation!  ";
+			json.put("message", error.substring(0,error.length()-2));
+		} else {
+			json.put("success", false);
+			json.put("message", "No message sent back from operation. Please try again.");
+		}
 		return json;
 	}
 	
@@ -933,7 +1157,32 @@ public class FabFlixRESTManager
 	 * @param error	name of the error occurred
 	 * @param message	message for the corresponding error
 	 */
-	public void writeJSONErrorMessage(String error, String message) {
+	private void writeJSONErrorMessage(String error, String message) {
 		writeErrorMessage("{\"error\":\"" + error + "\", \"message\": \"" + message + "\"}");
+	}
+	
+	/**
+	 * Get the column type name given a corresponding ID for the column type.
+	 * 
+	 * @param columnTypeID	column type ID
+	 * @return	title for the column type
+	 */
+	private String getColumnTypeName(int columnTypeID) {
+		switch (columnTypeID) {
+		case Types.INTEGER:
+			return "INTEGER";
+		case Types.DATE:
+			return "DATE";
+		case Types.NULL:
+			return "NULL";
+		case Types.VARCHAR:
+			return "VARCHAR";
+		case Types.CHAR:
+			return "CHAR";
+		case Types.NCHAR:
+			return "NCHAR";
+		default:
+			return "COLUMN TYPE ID = " + columnTypeID;
+		}
 	}
 }

@@ -78,7 +78,40 @@ public class FabFlixStarServlet extends HttpServlet {
 	 * @see HttpServlet#doPost(HttpServletRequest request, HttpServletResponse response)
 	 */
 	protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-		doGet(request, response);
+		String firstName = request.getParameter("firstName");
+		String lastName = request.getParameter("lastName");
+		String dob = request.getParameter("dob");
+		String photoURL = request.getParameter("photoURL");
+		String type = request.getParameter("type");
+		StringWriter out = new StringWriter();
+		FabFlixRESTManager restManager;
+		JSONObject result;
+		
+		if (type == null || !type.equals("_insert")) {
+			doGet(request, response);
+			return;
+		}
+		
+    	response.setContentType("text/html");
+        response.setCharacterEncoding("UTF-8");
+    	response.setContentType("text/html");
+        response.setCharacterEncoding("UTF-8");
+    	try {
+    		restManager = new FabFlixRESTManager(out);
+    		restManager.attemptConnection();
+    		result = restManager.insertStar(firstName, lastName, dob, photoURL);
+    		
+    		if (out.toString().isEmpty())
+    			out.write(result.toString());
+    		restManager.closeConnection();
+    		
+    	} catch (Exception e) {
+    		out.flush();
+    		out.write("{ \"success\": false, \"error\": \"" + e.getMessage() + "\" }");
+    	}
+    	
+    	response.getWriter().write(out.toString() + "\n");
+    	out.close();
 	}
 
 }

@@ -1,0 +1,302 @@
+<div class="container-fluid">
+  <form ng-submit="formSubmit()" class="form" ng-hide="loggedIn">
+  	<div class="col-md-4"></div>
+  	
+    <div class="col-md-4">
+      <div class="form-group">
+      	<div class="input-group">
+	      	<div class="input-group-addon"><span class="glyphicon glyphicon-envelope"></span> </div>
+      		<input type="text" class="form-control" ng-model="email" placeholder="E-mail address" required=""/>
+      	</div>
+      </div> 
+
+      <div class="form-group">
+      	<div class="input-group">
+      		<div class="input-group-addon"><span class="glyphicon glyphicon-lock"></span> </div>
+      		<input type="password" class="form-control" ng-model="password" placeholder="Password" required=""/>
+      	</div>
+      </div>
+	
+      <div class="form-group">
+        <button ng-disabled="loggingIn" type="submit" class="btn btn-block btn-primary start" id="loginButton">
+        	<span ng-show="loggingIn">Logging in</span>
+        	<span ng-hide="loggingIn">Login</span>
+        </button>
+        <span class="text-danger">{{ error }}</span>
+      </div>
+      
+      <div class="col-md-4"></div>
+
+    </div>
+  </form>
+  
+  <div class="container-fluid" ng-show="loggedIn">
+	<nav class="navbar navbar-default">
+		<div class="navbar-header">
+			<button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+				<span class="icon-bar"></span>
+				<span class="icon-bar"></span>
+				<span class="icon-bar"></span>
+			</button>    
+		</div>
+		<a class="navbar-brand" href="#">FabFlix</a>
+			
+		<div class="container-fluid">
+			<!-- Collect the nav links, forms, and other content for toggling -->
+			<div class="navbar-collapse collapse">
+				<ul class="nav navbar-nav navbar-left">
+			    	<li>
+			    		<a ng-click="dashboardHomeClicked()" style="cursor: pointer;">
+			    			<span class="glyphicon glyphicon-home"></span>
+			    			Home
+			    		</a>
+			    	</li>
+				</ul>
+			    <ul class="nav navbar-nav navbar-right">
+			    	<li>
+			    		<a ng-click="dashboardLogoutClicked()" style="cursor: pointer;">
+			    			<span class="glyphicon glyphicon-log-out"></span>
+			    			Logout
+			    		</a>
+			    	</li>
+			    </ul>
+			</div>
+		</div>
+	</nav>
+	
+	
+	<div class="container-fluid" ng-show="atHomeScreen">
+		<!-- Notification for successful insertion  -->
+		<div class="alert" ng-show="dashboardNotificationMessage" id="dashboardNotification">
+			<strong>Notification Message</strong>: {{dashboardNotificationMessage}}
+		</div>
+		
+		<!-- Notification for adding movie  -->
+		<div class="alert" ng-show="dashboardAddMovieMessage" id="dashboardAddMovieNotification">
+			<strong>Notification Message</strong>: {{dashboardAddMovieMessage}}
+		</div>
+		
+		<div class="col-sm-4">
+	        <button ng-click="dashboardInsertStarClicked()" class="btn btn-block btn-primary" style="color: white; border-radius: 5px; height: 275px; font-size: 40px">
+	        	<span class="glyphicon glyphicon-user" style="font-size: 100px;"></span>
+	        	<br />
+	        	<span>Insert Star</span>
+	        </button>
+		</div>
+		<div class="col-sm-4">
+	        <button ng-click="dashboardGetMetadataClicked()" class="btn btn-block btn-primary" style="color: white; border-radius: 5px; height: 275px; font-size: 40px">
+	        	<span class="glyphicon glyphicon-list-alt" style="font-size: 100px;"></span>
+	        	<br />
+	        	<span>Get Metadata</span>
+	        </button>
+		</div>
+		<div class="col-sm-4">
+	        <button ng-click="dashboardAddMovieClicked()" class="btn btn-block btn-primary" style="color: white; border-radius: 5px; height: 275px; font-size: 40px">
+	        	<span class="glyphicon glyphicon-film" style="font-size: 100px;"></span>
+	        	<br />
+	        	<span>Add Movie</span>
+	        </button>
+		</div>
+	</div>
+	
+	<div class="container-fluid" ng-show="atGetMetadataScreen">
+		<h3>Database Metadata</h3>
+		<hr />
+		
+		<!-- Loading animation while page is loading -->
+		<div ng-show="loadingMetadata" class="text-center">
+			<i class="fa fa-spinner fa-spin fa-3x fa-fw"></i>
+		</div>
+		
+		<div class="container-fluid" ng-show="metadata">
+			<table class="table table-striped">
+			  <thead>
+			    <tr>
+			      <th>Table Name</th>
+			      <th>Columns</th>
+			    </tr>
+			  </thead>
+			  <tbody>
+			    <tr ng-repeat="table in metadata">
+			      <th scope="row">{{table.tableName}}</th>
+			      <td>{{table.columns}}</td>
+			    </tr>
+			  </tbody>
+			</table>
+		</div>
+		
+		<!-- Notification for metadata operation  -->
+		<div class="alert alert-danger" ng-show="metadataError">
+			<strong>Metadata Error</strong>: {{metadataError}}
+		</div>
+	</div>
+	
+	<div class="container-fluid" ng-show="atAddMovieScreen">
+		<h3>Add Movie</h3>
+		<hr />
+		
+		<form class="form" ng-submit="addMovie()" ng-keypress="($event.which === 13)?addMovie():0">
+			<div class="form-group">
+				<label for="title"><b>Movie Title</b></label>
+				<input ng-model="title" type="text" class="form-control"  placeholder="e.g. 'The Godfather'" required="">
+			</div>
+			
+			<div class="form-group">
+				<label for="year"><b>Movie Year</b></label>
+				<input ng-model="year" type="number" class="form-control" placeholder="e.g. '1972'" required="">
+			</div>
+			
+			<div class="form-group">
+				<label for="director"><b>Movie Director</b></label>
+				<input ng-model="director" type="text" class="form-control" placeholder="e.g. 'Francis Ford Coppola'" required="">
+			</div>
+			
+			<div class="form-group">
+				<label for="firstName"><b>Star First Name (Optional)</b></label>
+				<input ng-model="firstName" type="text" class="form-control" placeholder="e.g. 'Marlon'">
+			</div>
+			
+			<div class="form-group">
+				<label for="lastName"><b>Star Last Name</b></label>
+				<input ng-model="lastName" type="text" class="form-control" placeholder="e.g. 'Brando'">
+			</div>
+			
+			<div class="form-group">
+				<label for="genre"><b>Movie Genre</b></label>
+				<input ng-model="genre" type="text" class="form-control" placeholder="e.g. 'Drama'">
+			</div>
+			
+			<div class="form-group">
+				<button class="btn btn-primary" type="button" ng-click="addMovie()" ng-disabled="addingMovie">
+					Submit <i class="fa fa-spinner fa-spin fa-fw" ng-show="addingMovie"></i>
+				</button>
+				<span class="text-danger" ng-show="showAddMovieError">You must have all the fields but the star's first name filled.</span>
+			</div>
+		</form>
+	</div>
+	
+	<div class="container-fluid" ng-show="atInsertStarScreen">
+		<h3>Insert Star</h3>
+		<hr />
+		
+		<form class="form" ng-submit="onInsertStar()" ng-keypress="($event.which === 13)?onInsertStar():0">
+			<div class="form-group">
+				<label for="starFirstName"><b>Star First Name</b></label>
+				<input ng-model="starFirstName" type="text" class="form-control"  placeholder="e.g. 'Marlon'">
+			</div>
+			
+			<div class="form-group">
+				<label for="starLastName"><b>Star Last Name</b></label>
+				<input ng-model="starLastName" type="text" class="form-control" placeholder="e.g. 'Brando'" required="">
+			</div>
+			
+			<div><label>Star Date of Birth</label></div>
+			<div class="form-inline" style="display: inline;">
+				<label for="starDOBYear">Year</label>
+				<select class="form-control" id="starDOBYear" ng-model="starDOBYear">
+					<option>1980</option>
+					<option>1981</option>
+					<option>1982</option>
+					<option>1983</option>
+					<option>1984</option>
+					<option>1985</option>
+					<option>1986</option>
+					<option>1987</option>
+					<option>1988</option>
+					<option>1989</option>
+					<option>1990</option>
+					<option>1991</option>
+					<option>1992</option>
+					<option>1993</option>
+					<option>1994</option>
+					<option>1995</option>
+					<option>1996</option>
+					<option>1997</option>
+					<option>1998</option>
+					<option>1999</option>
+					<option>2000</option>
+					<option>2001</option>
+					<option>2002</option>
+					<option>2003</option>
+					<option>2004</option>
+					<option>2005</option>
+					<option>2006</option>
+					<option>2007</option>
+					<option>2008</option>
+					<option>2009</option>
+					<option>2010</option>
+					<option>2011</option>
+					<option>2012</option>
+					<option>2013</option>
+					<option>2014</option>
+					<option>2015</option>
+					<option>2016</option>
+				</select>
+  
+				<label for="starDOBMonth" style="margin-left: 10px;">Month</label>
+				<select class="form-control" id="starDOBMonth" ng-model="starDOBMonth">
+					<option>01</option>
+					<option>02</option>
+					<option>03</option>
+					<option>04</option>
+					<option>05</option>
+					<option>06</option>
+					<option>07</option>
+					<option>08</option>
+					<option>09</option>
+					<option>10</option>
+					<option>11</option>
+					<option>12</option>
+				</select>
+				
+				<label for="starDOBDay" style="margin-left: 10px;">Day</label>
+				<select class="form-control" id="starDOBDay" ng-model="starDOBDay">
+					<option>01</option>
+					<option>02</option>
+					<option>03</option>
+					<option>04</option>
+					<option>05</option>
+					<option>06</option>
+					<option>07</option>
+					<option>08</option>
+					<option>09</option>
+					<option>10</option>
+					<option>11</option>
+					<option>12</option>
+					<option>13</option>
+					<option>14</option>
+					<option>15</option>
+					<option>16</option>
+					<option>17</option>
+					<option>18</option>
+					<option>19</option>
+					<option>20</option>
+					<option>21</option>
+					<option>22</option>
+					<option>23</option>
+					<option>24</option>
+					<option>25</option>
+					<option>26</option>
+					<option>27</option>
+					<option>28</option>
+					<option>29</option>
+					<option>30</option>
+					<option>31</option>
+				</select>
+			</div>
+			
+			<div class="form-group" style="margin-top: 15px;">
+				<label for="starPhotoURL"><b>Star Photo URL</b></label>
+				<input ng-model="starPhotoURL" type="text" class="form-control" placeholder="e.g. 'https://images-na.ssl-images-amazon.com/images/M/MV5BMjE1NDY5MjM5Ml5BMl5BanBnXkFtZTYwNTU1OTQ2._V1_.jpg  '">
+			</div>
+			
+			<div class="form-group">
+				<button class="btn btn-primary" type="button" ng-click="onInsertStar()" ng-disabled="insertingStar">
+					Submit <i class="fa fa-spinner fa-spin fa-fw" ng-show="insertingStar"></i>
+				</button>
+				<span class="text-danger" ng-show="showError">You must have the last name field filled.</span>
+			</div>
+		</form>
+	</div>
+  </div>
+</div>

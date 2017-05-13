@@ -23,6 +23,7 @@ public class FabFlixLoginServlet extends HttpServlet {
             throws IOException, ServletException {
     	String email = request.getParameter("email");
     	String password = request.getParameter("password");
+    	String type = request.getParameter("type");
     	String recaptchaResponse = request.getParameter("recaptchaResponse");
     	StringWriter out = new StringWriter();
     	JSONObject result = new JSONObject();
@@ -35,7 +36,7 @@ public class FabFlixLoginServlet extends HttpServlet {
         response.addHeader("Access-Control-Allow-Headers","Origin, X-Requested-With, Content-Type, Accept");
         
     	// Verify CAPTCHA.
-    	if (!FabFlixVerifyUtils.verify(recaptchaResponse)) {
+    	if (type != null && type.equals("_user") && !FabFlixVerifyUtils.verify(recaptchaResponse)) {
     	    out.write("{\"error\": \"Recaptcha Error\", \"message\": \"Recaptcha unverified. Please try again.\"}");
     	    response.getWriter().write(out.toString() + "\n");
         	out.close();
@@ -45,16 +46,20 @@ public class FabFlixLoginServlet extends HttpServlet {
     	try {
     		restManager = new FabFlixRESTManager(out);
     		restManager.attemptConnection();
-    		JSONObject userJSON = restManager.getUserInfo(email, password);
     		
-    		result.put("error", "null");
-    		if (userJSON != null) {
-        		result.put("user", userJSON);
-        		result.put("message", "success");
-        		
-    		} else {
-    			result.remove("user");
-    			result.put("message", "Invalid e-mail/password combination.");
+    		if (type.equals("_user")) {
+        		JSONObject userJSON = restManager.getUserInfo(email, password);
+        		result.put("error", "null");
+        		if (userJSON != null) {
+            		result.put("user", userJSON);
+            		result.put("message", "success");
+            		
+        		} else {
+        			result.remove("user");
+        			result.put("message", "Invalid e-mail/password combination.");
+        		}
+    		} else if (type.equals("_dashboard")) {
+    			result = restManager.getDashboardLogin(email, password);
     		}
     		
     		if (out.toString().isEmpty())

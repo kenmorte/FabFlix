@@ -118,6 +118,11 @@
 					cartData: null
 				}
 			})
+			.state('dashboard', {
+				url: '/_dashboard',
+				templateUrl : 'html/dashboard.html',
+				controller : 'DashboardController',
+			})
 			.state('readme', {
 				url: '/reports/readme',
 				templateUrl: 'reports/readme'
@@ -461,7 +466,6 @@
 		$scope.submitCartQuantity = function(movie) {
 			if (isNaN(movie.movie_cart_quantity))
 				movie.movie_cart_quantity = 0;
-			console.log("cart quant = ", movie.movie_cart_quantity);
 			movie.loadingCartSubmit = true;
 			movie.addToCartText = "Adding to Cart";
 			
@@ -918,6 +922,233 @@
 			// TODO: If success, lead to confirmation page
 		}
 	});
+	
+	app.controller('DashboardController', function($scope, $rootScope, $http, $window, LoginService, DashboardService) {
+		$rootScope.title = "Dashboard";
+		$scope.loggingIn = false;
+		$scope.insertingStar = false;
+		$scope.loadingMetadata = false;
+		$scope.addingMovie = false;
+		
+		$scope.loggedIn = false;
+		$scope.atHomeScreen = false;
+		$scope.atInsertStarScreen = false;
+		$scope.atGetMetadataScreen = false;
+		$scope.atAddMovieScreen = false;
+		
+		$scope.dashboardNotificationMessage = "";
+		
+		// Insert star fields
+		$scope.starFirstName = "";
+		$scope.starLastName = "";
+		$scope.starDOBYear = "2000";
+		$scope.starDOBMonth = "01";
+		$scope.starDOBDay = "01";
+		$scope.starPhotoURL = "";
+		$scope.insertStarError = "";
+		
+		// Metadata members
+		$scope.metadata = null;
+		$scope.metadataError = "";
+		
+		// Insert movie members
+		$scope.title = "";
+		$scope.year = "";
+		$scope.director = "";
+		$scope.firstName = "";
+		$scope.lastName = "";
+		$scope.genre = "";
+		$scope.showAddMovieError = false;
+		
+
+		// Called after user attempts to log in
+		$scope.formSubmit = function() {
+			$scope.loggingIn = true;
+  
+			LoginService.dashboardLogin($http, $scope.email, $scope.password, $scope.recaptchaResponse)
+				.then(function(data) {
+					if (data && data.success) {
+						$scope.error = '';
+						$scope.email = '';
+						$scope.password = '';
+						$scope.loggedIn = true;
+						$scope.showDashboard();
+    
+					} else {
+						if (!data)
+							$scope.error = "Error connecting to the server. Please try again.";
+						else
+							$scope.error = "Incorrect email/password combination for dashboard login!";
+					}
+					$scope.loggingIn = false;
+				}
+			);
+		};
+		
+		$scope.onInsertStar = function() {	
+			if (!$scope.starLastName) {
+				$scope.showError = true;
+				return;
+			}
+			
+			$scope.insertingStar = true;
+			$scope.insertStarError = "";
+			$scope.showError = false;
+			
+			DashboardService.insertStar(
+					$http,
+					$scope.starFirstName, $scope.starLastName, 
+					$scope.starDOBYear + "-" + $scope.starDOBMonth + "-" + $scope.starDOBDay,
+					$scope.starPhotoURL)
+					.then(function(data) {
+						var notificationClass = "";
+						
+						if (data && data.success) {
+							$scope.dashboardNotificationMessage = "Successfully inserted star! New star ID = " + data.star_id;
+							notificationClass = "alert-success";
+						} else if (data && !data.success) {
+							$scope.dashboardNotificationMessage = "Error: " + data.error;
+							notificationClass = "alert-danger";
+						} else {
+							$scope.dashboardNotificationMessage = "Error: Unable to process insertion of star. Please try again.";
+							notificationClass = "alert-danger";
+						}
+						
+						$scope.insertingStar = false;
+						angular.element( document.querySelector( '#dashboardNotification' ) )
+							.addClass(notificationClass);
+						$scope.showDashboard();
+					})
+		}
+		
+		$scope.showDashboard = function() {
+			if (!$scope.loggedIn) {
+				$scope.atHomeScreen = false;
+				$scope.insertStarScreen = false;
+				return;
+			}
+			$scope.atHomeScreen = true;
+			$scope.atInsertStarScreen = false;
+			$scope.atGetMetadataScreen = false;
+			$scope.atAddMovieScreen = false;
+		}
+		
+		$scope.showMetadata = function() {
+			$scope.metadata = null;
+			$scope.metadataError = "";
+			$scope.loadingMetadata = true;
+			
+			DashboardService.getMetadata($http)
+				.then(function(data) {
+					if (data && data.success) {
+						$scope.metadata = data.metadata
+						$scope.metadataError = "";
+					} else if (data && !data.success) {
+						$scope.metadata = null;
+						$scope.metadataError = data.error;
+					} else {
+						$scope.metadata = null;
+						$scope.metadataError = "An error occurred processing the metadata. Please try again."
+					}
+					$scope.loadingMetadata = false;
+				});
+		}
+		
+		$scope.addMovie = function() {
+			if (!$scope.title || !$scope.year || !$scope.director || !$scope.lastName || !$scope.genre) {
+				$scope.showAddMovieError = true;
+				return;
+			}
+			
+			$scope.addingMovie = true;
+			$scope.showAddMovieError = false;
+			DashboardService.addMovie($http, 
+					$scope.title, $scope.year, $scope.director, 
+					$scope.firstName, $scope.lastName, 
+					$scope.genre)
+				.then(function(data) {
+					var notificationClass = "";
+					
+					if (data && data.success) {
+						notificationClass = "alert-success";
+						$scope.dashboardAddMovieMessage = "Successfully added movie to database!";
+					} else if (data && !data.success) {
+						notificationClass = "alert-danger";
+						$scope.dashboardAddMovieMessage = "Error: " + data.message;
+					} else {
+						notificationClass = "alert-danger";
+						$scope.dashboardAddMovieMessage = "Error: An error occurred completing the add movie request. Please try again.";
+					}
+					
+					$scope.addingMovie = false;
+					angular.element( document.querySelector( '#dashboardAddMovieNotification' ) )
+						.addClass(notificationClass);
+					$scope.showDashboard();
+				});
+			
+		}
+		
+		$scope.showAddMovie = function() {
+			$scope.title = "";
+			$scope.year = "";
+			$scope.director = "";
+			$scope.firstName = "";
+			$scope.lastName = "";
+			$scope.genre = "";
+			$scope.addingMovie = false;
+			$scope.showAddMovieError = false;
+		}
+		
+		$scope.dashboardHomeClicked = function() {
+			$scope.showDashboard();
+			$scope.dashboardNotificationMessage = "";
+			$scope.dashboardAddMovieMessage = "";
+		}
+		
+		$scope.dashboardInsertStarClicked = function() {
+			$scope.loggedIn = true;
+			$scope.atHomeScreen = false;
+			$scope.atInsertStarScreen = true;
+			$scope.atGetMetadataScreen = false;
+			$scope.atAddMovieScreen = false;
+			$scope.showError = false;
+			
+			$scope.starFirstName = "";
+			$scope.starLastName = "";
+			$scope.starDOBYear = "2000";
+			$scope.starDOBMonth = "01";
+			$scope.starDOBDay = "01";
+			$scope.starPhotoURL = "";
+			$scope.insertStarError = "";
+		}
+		
+		$scope.dashboardGetMetadataClicked = function() {
+			$scope.loggedIn = true;
+			$scope.atHomeScreen = false;
+			$scope.atInsertStarScreen = false;
+			$scope.atGetMetadataScreen = true;
+			$scope.atAddMovieScreen = false;
+			$scope.showError = false;
+			$scope.showMetadata();
+		}
+		
+		$scope.dashboardAddMovieClicked = function() {
+			$scope.loggedIn = true;
+			$scope.atHomeScreen = false;
+			$scope.atInsertStarScreen = false;
+			$scope.atGetMetadataScreen = false;
+			$scope.atAddMovieScreen = true;
+			$scope.showMovieError = false;
+			$scope.showAddMovie();
+		}
+		
+		$scope.dashboardLogoutClicked = function() {
+			$scope.loggedIn = false;
+			$scope.atHomeScreen = false;
+			$scope.atInsertStarScreen = false;
+			$scope.atGetMetadataScreen = false;
+		}
+	});
   
 	app.factory('LoginService', function() {
 		var data = null;
@@ -928,7 +1159,20 @@
 				return $http({
 					method: 'POST',
 					url: 'http://localhost:8080/FabFlix/servlet/FabFlixLoginServlet',
-					data: { email: email, password: password, recaptchaResponse: (recaptchaResponse ? recaptchaResponse : null) }
+					data: { email: email, password: password, type: "_user", recaptchaResponse: (recaptchaResponse ? recaptchaResponse : null) }
+				}).then(function successCallback(response) {
+					data = response.data;
+					return response.data;
+				}, function errorCallback(response) {
+					return null;
+				});
+			},
+			dashboardLogin : function($http, email, password) {
+				// HTTP POST runs asnychronously
+				return $http({
+					method: 'POST',
+					url: 'http://localhost:8080/FabFlix/servlet/FabFlixLoginServlet',
+					data: { email: email, password: password, type: "_dashboard" }
 				}).then(function successCallback(response) {
 					data = response.data;
 					return response.data;
@@ -938,6 +1182,58 @@
 			},
 			isAuthenticated : function() {
 				return data !== null;
+			}
+		};
+	});
+	
+	app.factory('DashboardService', function() {
+		return {
+			insertStar: function($http, firstName, lastName, dob, photoURL) {
+				// HTTP POST runs asnychronously
+				return $http({
+					method: 'POST',
+					url: 'http://localhost:8080/FabFlix/servlet/FabFlixStarServlet',
+					data: { firstName: firstName, lastName: lastName, dob: dob, photoURL: photoURL, type: "_insert" }
+				}).then(function successCallback(response) {
+					data = response.data;
+					return response.data;
+				}, function errorCallback(response) {
+					return null;
+				});
+			},
+			getMetadata: function($http) {
+				// HTTP POST runs asnychronously
+				return $http({
+					method: 'GET',
+					url: 'http://localhost:8080/FabFlix/servlet/FabFlixSearchServlet',
+					params: {  query_type: "GET_METADATA" }
+				}).then(function successCallback(response) {
+					data = response.data;
+					return response.data;
+				}, function errorCallback(response) {
+					return null;
+				});
+			},
+			addMovie: function($http, title, year, director, firstName, lastName, genre) {
+				// HTTP POST runs asnychronously
+				return $http({
+					method: 'POST',
+					url: 'http://localhost:8080/FabFlix/servlet/FabFlixMovieServlet',
+					params: { 
+						type: "_add",
+						title: title,
+						year:year,
+						director:director,
+						firstName:firstName,
+						lastName:lastName,
+						genre:genre
+					}
+				}).then(function successCallback(response) {
+					data = response.data;
+					return response.data;
+				}, function errorCallback(response) {
+					return null;
+				});
 			}
 		};
 	});
@@ -1001,7 +1297,6 @@
 						transactionDate: transactionDate
 					}
 				}).then(function successCallback(response) {
-					console.log("response = ", response);
 					return response.data;
 				}, function errorCallback(response) {
 					return null;

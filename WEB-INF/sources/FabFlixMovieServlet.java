@@ -73,7 +73,39 @@ public class FabFlixMovieServlet extends HttpServlet {
 	 * @see HttpServlet#doPost(HttpServletRequest request, HttpServletResponse response)
 	 */
 	protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-		doGet(request, response);
+		String title = request.getParameter("title");
+		String year = request.getParameter("year");
+		String director = request.getParameter("director");
+		String firstName = request.getParameter("firstName");
+		String lastName = request.getParameter("lastName");
+		String genre = request.getParameter("genre");
+		String type = request.getParameter("type");
+		StringWriter out = new StringWriter();
+		JSONObject result = new JSONObject();
+		FabFlixRESTManager restManager;
+		
+		if (!type.equals("_add")) {
+			doGet(request, response);
+			return;
+		}
+    	response.setContentType("text/html");
+        response.setCharacterEncoding("UTF-8");
+    	try {
+    		restManager = new FabFlixRESTManager(out);
+    		restManager.attemptConnection();
+    		result = restManager.addMovie(title, year, director, firstName, lastName, genre);
+    		
+    		if (out.toString().isEmpty())
+    			out.write(result.toString());
+    		restManager.closeConnection();
+    		
+    	} catch (Exception e) {
+    		out.flush();
+    		out.write("{ \"success\": false, \"message\": \"" + e.getMessage() + "\" }");
+    	}
+    	
+    	response.getWriter().write(out.toString() + "\n");
+    	out.close();
 	}
 
 }

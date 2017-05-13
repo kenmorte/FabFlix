@@ -32,7 +32,8 @@ public class FabFlixSearchServlet extends HttpServlet {
     		doGetBrowseByMovieGenre(request, response, orderColumn, orderType, offset, limit);
     	if (queryType.equalsIgnoreCase("BROWSE_BY_PARAMETERS"))
     		doGetSearchByMovieParameters(request, response, orderColumn, orderType, offset, limit);
-    		
+    	if (queryType.equalsIgnoreCase("GET_METADATA"))
+    		doGetMetadata(request, response);
     }
     
 	/**
@@ -183,6 +184,32 @@ public class FabFlixSearchServlet extends HttpServlet {
     	} catch (Exception e) {
     		out.flush();
     		out.write("{ \"error\": \"" + e.getClass().getName() + "\", \"message\": \"" + e.getMessage() + "\" }");
+    	}
+    	
+    	response.getWriter().write(out.toString() + "\n");
+    	out.close();
+    }
+
+    public void doGetMetadata(HttpServletRequest request, HttpServletResponse response) 
+    		throws IOException, ServletException {
+    	StringWriter out = new StringWriter();
+    	JSONObject result = new JSONObject();
+    	FabFlixRESTManager restManager;
+    	
+    	response.setContentType("text/html");
+        response.setCharacterEncoding("UTF-8");
+    	try {
+    		restManager = new FabFlixRESTManager(out);
+    		restManager.attemptConnection();
+    		result = restManager.getMetaData();
+    		
+    		if (out.toString().isEmpty())
+    			out.write(result.toString());
+    		restManager.closeConnection();
+    		
+    	} catch (Exception e) {
+    		out.flush();
+    		out.write("{ \"success\": false, \"error\": \"" + e.getMessage() + "\" }");
     	}
     	
     	response.getWriter().write(out.toString() + "\n");
