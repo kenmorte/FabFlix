@@ -24,6 +24,36 @@
 			    			Shopping Cart
 			    		</a>
 			    	</li>
+			    	<li>
+			    		<div class="container-fluid navbar-input-group" style="margin-top: 8px;">
+							<angucomplete-alt id="keyword-angucomplete"
+								 placeholder="Search for movies by title keywords"
+								 pause="300"
+								 selected-object="movieSelectedFromKeywordSearch"
+								 remote-url="http://localhost:8080/FabFlix/servlet/FabFlixSearchServlet?query_type=BROWSE_BY_MOVIE_KEYWORDS&keywords="
+								 remote-url-response-formatter="formatResponse"
+								 remote-url-data-field="movie_data"			
+								 remote-url-error-callback="keywordErrorReceived"	
+								 title-field="movie_title"
+								 description-field="movie_stars"
+								 image-field="movie_banner_url"
+								 minlength="1"
+								 input-class="form-control form-control-small"
+								 match-class="highlight"
+								 text-searching="Searching for movies..."
+								 text-no-results="No movies found!"
+								 input-changed="keywordInputChanged"
+								 style="display: inline-block; width: 475px;">
+							</angucomplete-alt>
+							<button 
+								class="btn btn-primary" 
+								type="button" 
+								ng-click="keywordSubmit(keywordInput)"
+								style="display: inline-block;">
+								<span class="glyphicon glyphicon-search" aria-hidden="true"></span>
+							</button>
+						</div>
+			    	</li>
 				</ul>
 			    <ul class="nav navbar-nav navbar-right">
 			    	<li>
@@ -42,9 +72,8 @@
 		<div class="alert" ng-show="confirmationMessage" id="confirmationText">
 			<strong>Checkout Message</strong>: {{confirmationMessage}}
 		</div>
-	
-		<h3>Search For Movies</h3>
 		
+		<h3>Search For Movies</h3>
 		<form class="form" ng-submit="searchSubmit()" ng-keypress="($event.which === 13)?searchSubmit():0">
 			<div class="form-group">
 				<label for="titleInput"><b>Title</b></label>
@@ -72,7 +101,7 @@
 			</div>
 			
 			<div class="form-group">
-				<button class="btn btn-primary" type="button" ng-click="searchSubmit()">Search</button>
+				<button class="btn btn-primary btn-block" type="button" ng-click="searchSubmit()">Search</button>
 				<span class="text-danger" ng-show="showError">You must have at least one field filled.</span>
 			</div>
 		</form>

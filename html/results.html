@@ -24,6 +24,36 @@
 			    			Shopping Cart
 			    		</a>
 			    	</li>
+			    	<li>
+			    		<div class="container-fluid navbar-input-group" style="margin-top: 8px;">
+							<angucomplete-alt id="keyword-angucomplete"
+								 placeholder="Search for movies by title keywords"
+								 pause="300"
+								 selected-object="movieSelectedFromKeywordSearch"
+								 remote-url="http://localhost:8080/FabFlix/servlet/FabFlixSearchServlet?query_type=BROWSE_BY_MOVIE_KEYWORDS&keywords="
+								 remote-url-response-formatter="formatResponse"
+								 remote-url-data-field="movie_data"			
+								 remote-url-error-callback="keywordErrorReceived"	
+								 title-field="movie_title"
+								 description-field="movie_stars"
+								 image-field="movie_banner_url"
+								 minlength="1"
+								 input-class="form-control form-control-small"
+								 match-class="highlight"
+								 text-searching="Searching for movies..."
+								 text-no-results="No movies found!"
+								 input-changed="keywordInputChanged"
+								 style="display: inline-block; width: 475px;">
+							</angucomplete-alt>
+							<button 
+								class="btn btn-primary" 
+								type="button" 
+								ng-click="keywordSubmit(keywordInput)"
+								style="display: inline-block;">
+								<span class="glyphicon glyphicon-search" aria-hidden="true"></span>
+							</button>
+						</div>
+			    	</li>
 				</ul>
 			    <ul class="nav navbar-nav navbar-right">
 			    	<li>
@@ -39,7 +69,6 @@
 	
 	
 	<div class="container">
-	
 		<h3>Search Results: {{query_display}}</h3>
 		<hr />
 		
@@ -117,7 +146,93 @@
 					</a>
 				</div>
 				<div class="col-xs-12 col-sm-12 col-md-6 excerpet">
-					<h3><a ng-click="onMovieClick(movie.movie_id)" style="cursor: pointer;">{{movie.movie_title}}</a></h3>
+					<h3>
+						<a ng-attr-id="{{ 'movie-' + movie.movie_id }}" ng-mouseover="onMovieMouseover(movie, $event)" ng-mouseleave="onMovieMouseLeave(movie)"  ng-click="onMovieClick(movie.movie_id)" style="cursor: pointer;">
+							{{movie.movie_title}}
+						</a>
+					</h3>
+					<div 
+						class="container-fluid" 
+						ng-attr-id="{{ 'moviePopup-' + movie.movie_id }}" 
+						ng-show="movie.showPopup" 
+						ng-mouseover="onMovieMouseover(movie, $event)" 
+						ng-mouseleave="onMovieMouseLeave(movie)"
+						style="
+					    display: inline-block;
+					    background: lightgrey;
+					    width: 650px;
+					    height: 310px;
+					    position: absolute;
+					    z-index: 2201;
+					    top: 10px;
+					    border-radius: 5px;
+					    box-shadow: 0 2px 8px rgba(0,0,0,0.2);">
+					<iframe ng-src="{{getIframeSrc(movie)}}" alt="Preview"
+					   width="300" height="200" frameborder="1" allowfullscreen
+					   style="position: absolute; left: 50%; top: 15%;">
+					</iframe>
+					<ul class="meta-search list-unstyled col-xs-6">
+						<li><h5>
+							<i class="glyphicon glyphicon-facetime-video"></i> 
+							Movie Title: <u>{{movie.movie_title}}</u>
+						</h5></li>
+						<li><h5>
+							<i class="glyphicon glyphicon-search"></i> 
+							Movie ID: <u>{{movie.movie_id}}</u>
+						</h5></li>
+						<li><h5>
+							<i class="glyphicon glyphicon-calendar"></i> 
+							Year Released: <span class="label label-info">{{movie.movie_year}}</span>
+						</h5></li>
+						<li><h5>
+							<i class="glyphicon glyphicon-film"></i> 
+							Director: <span class="label label-info">{{movie.movie_director}}</span>
+						</h5></li>		
+						<li><h5>
+							<i class="glyphicon glyphicon-user"></i> 
+							Star(s): 
+							<ul class="list-unstyled list-inline" style="display: inline-block;">
+								<li ng-repeat="star in movie.movie_stars" style="margin-bottom:0.5em; margin-top:0.5em; cursor: pointer;">
+									<span class="label label-info btn btn-primary" ng-click="onStarClicked(star.star_id)">
+										{{star.star_first_name + " " + star.star_last_name}}
+									</span>
+								</li>
+							</ul>
+						</h5></li>
+						<li>
+							<div class="row">
+								<div class="col-xs-6 center-block">
+									<label for="quantity">Quantity</label>
+							    	<div class="input-group">
+							     		<span class="input-group-btn">
+							        		<button class="btn btn-primary" type="button" ng-click="subtractCartQuantity(movie)">-</button>
+							      		</span>
+							      		<input id="quantity" ng-model="movie.movie_cart_quantity" type="text" class="form-control" style="text-align: center;">
+							     		<span class="input-group-btn">
+							        		<button class="btn btn-primary" type="button" ng-click="addCartQuantity(movie)">+</button>
+							      		</span>
+							    	</div>
+							    </div>
+							  	<div class="col-xs-2">
+							  		<label for="addToCartButton"></label>
+							    	<div class="input-group" style="margin-top: 6px">
+										<button id="addToCartButton" type="button" class="btn btn-success" ng-click="submitCartQuantity(movie)" ng-disabled="movie.loadingCartSubmit">
+											<span class="glyphicon glyphicon-shopping-cart"></span>
+											{{movie.addToCartText}}
+											<i class="fa fa-spinner fa-spin fa-lg fa-fw" ng-show="movie.loadingCartSubmit"></i>
+										</button>
+							    	</div>
+							  	</div>
+						  	</div>
+						</li>
+						<li>
+							<!-- Notification for adding a movie to the cart -->
+							<div class="alert alert-success" ng-show="movie.showUpdate" style="margin-top: 20px;">
+								<strong>Success</strong>: Updated your cart quantity for the movie <i>{{movie.movie_title}}</i>!
+							</div>
+						</li>
+					</ul>
+					</div>
 					<ul class="meta-search list-unstyled">
 						<li><h5>
 							<i class="glyphicon glyphicon-search"></i> 
@@ -130,8 +245,7 @@
 						<li><h5>
 							<i class="glyphicon glyphicon-film"></i> 
 							Director: <span class="label label-info">{{movie.movie_director}}</span>
-						</h5></li>
-						<li><h5>
+						</h5></li>						<li><h5>
 							<i class="glyphicon glyphicon-tag"></i> 
 							Genre(s): 
 							<ul class="list-unstyled list-inline" style="display: inline-block;">
@@ -142,6 +256,7 @@
 								</li>
 							</ul>
 						</h5></li>
+
 						<li><h5>
 							<i class="glyphicon glyphicon-user"></i> 
 							Star(s): 

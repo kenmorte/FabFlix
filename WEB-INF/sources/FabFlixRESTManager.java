@@ -408,10 +408,125 @@ public class FabFlixRESTManager
 	}
 	
 	/**
+	 * Retrieves a JSON object of movies given specific movie title keywords.
+	 * If no movies were found, then the corresponding JSON array is an empty list.
+	 * Otherwise, the list contains JSONObjects of resulting movies.
+	 * @see FabFlixRESTManager#getMovieById(String sessionId, Integer id) for movie JSON format
+	 * 
+	 * @param sessionId ID for the user's session (for cart data)
+	 * @param keywords keywords for the movie title
+	 * @param orderColumn the column to order the resulting list by (should be either "title" or "year")
+	 * @param orderType either "desc" for descending or "asc" for ascending
+	 * @param offset starting point from the resulting rows in the table
+	 * @param limit number of results limited to display
+	 * @return	JSON array containing the format above for movies with given movie title keywords
+	 * @throws SQLException if there was an error parsing the SQL command
+	 * @throws JSONException if there was an error parsing the JSON object
+	 */
+	public JSONObject getMoviesByKeywords(
+		String sessionId,
+		String keywords,
+		String orderColumn, String orderType,
+		String offset, String limit) throws SQLException, JSONException {
+		if (sessionId == null)
+			sessionId = "";
+		if (orderColumn == null)
+			orderColumn = DATABASE_DEFAULT_ORDER_COLUMN;
+		if (orderType == null)
+			orderType = DATABASE_DEFAULT_ORDER_TYPE;
+		if (offset == null)
+			offset = DATABASE_DEFAULT_OFFSET;
+		if (limit == null)
+			limit = DATABASE_DEFAULT_LIMIT;
+		
+		Statement select, nMoviesSelect;
+		PreparedStatement genreStatement, starsStatement, cartsStatement;
+		ResultSet movieResult, genreResult, starsResult, cartsResult, nMoviesResult;
+		JSONArray movieDataJSONArray, genresJSONArray, starsJSONArray;
+		JSONObject movieJSON, starJSON, resultJSON;
+		// Use the default order column/type
+		orderColumn = orderColumn.equalsIgnoreCase("year") ? "year" : DATABASE_DEFAULT_ORDER_COLUMN;
+		orderType = orderType.equalsIgnoreCase("desc") ? "desc" : DATABASE_DEFAULT_ORDER_TYPE;
+		
+		select = mDatabase.createStatement();
+		nMoviesSelect = mDatabase.createStatement();
+		// Replace ? with the movie ID
+		genreStatement = mDatabase.prepareStatement("select g.name from genres g, genres_in_movies gm where gm.movie_id = ? and gm.genre_id = g.id;");
+		starsStatement = mDatabase.prepareStatement("select s.id, s.first_name,s.last_name from stars s, stars_in_movies sm where sm.movie_id = ? and sm.star_id = s.id;");
+		cartsStatement = mDatabase.prepareStatement("select amount from carts where session_id = \"" + sessionId + "\" and movie_id = ?");
+		movieResult = select.executeQuery(
+			"select distinct m.* from movies m " 
+			+ getKeywordMatchingWhereClause(keywords)
+			+ " order by " + orderColumn 
+			+ " " + orderType 
+			+ " limit " + limit 
+			+ " offset " + offset
+		);
+		nMoviesResult = nMoviesSelect.executeQuery("select distinct m.* from movies m " + getKeywordMatchingWhereClause(keywords));
+		resultJSON = new JSONObject();
+		movieDataJSONArray = new JSONArray();
+		
+		// Get the number of resulting movies from the database
+		nMoviesResult.last();
+		resultJSON.put("number_of_results", nMoviesResult.getRow());
+		
+		// Collect all the movies from the database
+		while (movieResult.next()) {
+			Integer movieID = movieResult.getInt(1);
+			Integer cartAmount = 0;
+			genresJSONArray = new JSONArray();
+			starsJSONArray = new JSONArray();
+			movieJSON = new JSONObject();
+			
+			// Collect all the genres associated with the current movie
+			genreStatement.setInt(1, movieID);
+			genreResult = genreStatement.executeQuery();
+			while (genreResult.next()) {
+				genresJSONArray.put(genreResult.getString(1));
+			}
+			
+			// Collect all the stars associated with the current movie
+			starsStatement.setInt(1, movieID);
+			starsResult = starsStatement.executeQuery();
+			while (starsResult.next()) {
+				starJSON = new JSONObject();
+				starJSON.put("star_id", starsResult.getInt(1));
+				starJSON.put("star_first_name", starsResult.getString(2));
+				starJSON.put("star_last_name", starsResult.getString(3));
+				starsJSONArray.put(starJSON);
+			}
+			
+			// Get the amount of this movie inside the cart for a specific user session
+			cartsStatement.setInt(1, movieID);
+			cartsResult = cartsStatement.executeQuery();
+			if (cartsResult.next()) {
+				cartAmount = cartsResult.getInt(1);
+			}
+			
+			// Put all the elements inside our resulting movie JSON
+			movieJSON.put("movie_id", movieID);
+			movieJSON.put("movie_title", movieResult.getString(2));
+			movieJSON.put("movie_year", movieResult.getInt(3));
+			movieJSON.put("movie_director", movieResult.getString(4));
+			movieJSON.put("movie_banner_url", movieResult.getString(5));
+			movieJSON.put("movie_trailer_url", movieResult.getString(6));
+			movieJSON.put("movie_genres", genresJSONArray);
+			movieJSON.put("movie_stars", starsJSONArray);
+			movieJSON.put("movie_cart_quantity", cartAmount);
+			
+			movieDataJSONArray.put(movieJSON);
+		}
+		resultJSON.put("movie_data", movieDataJSONArray);
+		return resultJSON;
+	}
+
+	/**
 	 * Retrieves a JSON object of movies given various query parameters.
 	 * If no movies were found, then the corresponding JSON array is an empty list.
 	 * Otherwise, the list contains JSONObjects of resulting movies.
+	 * @see FabFlixRESTManager#getMovieById(String sessionId, Integer id) for movie JSON format
 	 * 
+	 * @param sessionId ID for the user's session (for cart data)
 	 * @param title	title parameter for a movie
 	 * @param year	year parameter for when movie is released
 	 * @param director	director parameter for movie
@@ -1139,6 +1254,31 @@ public class FabFlixRESTManager
 				result += " and " + column + " like \"%" + map.get(column) + "%\"";
 			}
 		}
+		return result;
+	}
+	
+	/**
+	 * Gets the where clause for keyword matching given a user-input keyword(s).
+	 * If the keyword is null or no keywords were given, an empty string is returned.
+	 * 
+	 * @param keywords	keywords for a movie title
+	 * @return	string for the where clause for the SQL statement in keyword query
+	 */
+	private String getKeywordMatchingWhereClause(String keywords) {
+		if (keywords == null)
+			return "";
+		String[] keywordTokens = keywords.split(" ");
+		String result = " where ";
+		
+		// Get the first keyword token if there is one
+		if (keywordTokens.length > 0)
+			result += "m.title like \"%" + keywordTokens[0] + "%\"";
+		else
+			return "";
+		
+		for (int i = 1; i < keywordTokens.length; i++)
+			result += " and m.title like \"%" + keywordTokens[i] + "%\" ";
+		
 		return result;
 	}
 	

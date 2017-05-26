@@ -26,13 +26,15 @@ public class FabFlixSearchServlet extends HttpServlet {
     	
     	if (queryType == null)
     		return;
-    	if (queryType.equalsIgnoreCase("BROWSE_BY_MOVIE_TITLE"))
+    	else if (queryType.equalsIgnoreCase("BROWSE_BY_MOVIE_KEYWORDS"))
+    		doGetSearchByMovieTitleKeywords(request, response, orderColumn, orderType, offset, limit);
+    	else if (queryType.equalsIgnoreCase("BROWSE_BY_MOVIE_TITLE"))
     		doGetBrowseByMovieTitle(request, response, orderColumn, orderType, offset, limit);
-    	if (queryType.equalsIgnoreCase("BROWSE_BY_MOVIE_GENRE"))
+    	else if (queryType.equalsIgnoreCase("BROWSE_BY_MOVIE_GENRE"))
     		doGetBrowseByMovieGenre(request, response, orderColumn, orderType, offset, limit);
-    	if (queryType.equalsIgnoreCase("BROWSE_BY_PARAMETERS"))
+    	else if (queryType.equalsIgnoreCase("BROWSE_BY_PARAMETERS"))
     		doGetSearchByMovieParameters(request, response, orderColumn, orderType, offset, limit);
-    	if (queryType.equalsIgnoreCase("GET_METADATA"))
+    	else if (queryType.equalsIgnoreCase("GET_METADATA"))
     		doGetMetadata(request, response);
     }
     
@@ -189,7 +191,61 @@ public class FabFlixSearchServlet extends HttpServlet {
     	response.getWriter().write(out.toString() + "\n");
     	out.close();
     }
-
+    
+    /**
+     * Completes the request for searching movies by title keywords.
+     * 
+     * @param request	HTTP request from user
+     * @param response	HTTP response back to user
+     * @param orderColumn	order column to sort result by
+     * @param orderType		order type to sort result by
+     * @param offset	offset of results from table
+     * @param limit		limit of results to be displayed
+     * @throws IOException	if there was an error parsing the response/request
+     * @throws ServletException	if there was an error with the server
+     */
+    public void doGetSearchByMovieTitleKeywords(HttpServletRequest request, HttpServletResponse response, 
+    	String orderColumn, String orderType,
+    	String offset, String limit) throws IOException, ServletException {
+    	String keywords = request.getParameter("keywords");
+    	System.out.println("keywords = " + keywords);
+    	
+    	StringWriter out = new StringWriter();
+    	JSONObject result = new JSONObject();
+    	FabFlixRESTManager restManager;
+    	
+    	response.setContentType("text/html");
+        response.setCharacterEncoding("UTF-8");
+    	try {
+    		restManager = new FabFlixRESTManager(out);
+    		restManager.attemptConnection();
+    		result = restManager.getMoviesByKeywords(
+    			request.getSession(true).getId(),
+    			keywords,
+    			orderColumn, orderType, offset, limit
+    		);
+    		
+    		if (out.toString().isEmpty())
+    			out.write(result.toString());
+    		restManager.closeConnection();
+    		
+    	} catch (Exception e) {
+    		out.flush();
+    		out.write("{ \"error\": \"" + e.getClass().getName() + "\", \"message\": \"" + e.getMessage() + "\" }");
+    	}
+    	System.out.println("response = " + out.toString());
+    	response.getWriter().write(out.toString() + "\n");
+    	out.close();
+    }
+    
+    /**
+     * Completes the request for querying for database meta-data.
+     * 
+     * @param request	HTTP request from user
+     * @param response	HTTP response back to user
+     * @throws IOException	if there was an error parsing the response/request
+     * @throws ServletException	if there was an error with the server
+     */
     public void doGetMetadata(HttpServletRequest request, HttpServletResponse response) 
     		throws IOException, ServletException {
     	StringWriter out = new StringWriter();
@@ -215,4 +271,5 @@ public class FabFlixSearchServlet extends HttpServlet {
     	response.getWriter().write(out.toString() + "\n");
     	out.close();
     }
+
 }

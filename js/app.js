@@ -1,13 +1,13 @@
 (function() {
 	// Initialize our app module
-	var app = angular.module('FabFlix', ['ui.router','ngCookies','vcRecaptcha']);
+	var app = angular.module('FabFlix', ['ui.router','ngCookies','angucomplete-alt','vcRecaptcha']);
   
   // http://stackoverflow.com/questions/19254029/angularjs-http-post-does-not-send-data/35699599
 	angular.module('FabFlix')
 		.config(function ($httpProvider, $httpParamSerializerJQLikeProvider){
 			$httpProvider.defaults.transformRequest.unshift($httpParamSerializerJQLikeProvider.$get());
 			$httpProvider.defaults.headers.post['Content-Type'] = 'application/x-www-form-urlencoded; charset=utf-8';
-	});
+		});
 	
 	// Initializing our app (rootScope)
 	app.run(function($rootScope, $location, $state, $cookies, LoginService) {
@@ -174,8 +174,10 @@
 		                    "Crime", "Documentary", "Drama", "Family", "Fantasy", "Foreign", "Gangster", "History",
 		                    "Horror", "Indie", "James Bond", "Music", "Musical", "Musical/Performing Arts", "Mystery", 
 		                    "Roman", "Romance", "Sci-Fi", "Sport", "Spy", "Suspense", "Thriller", "War"];
+	    
 		$scope.charList = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 		$scope.showError = false;
+		$scope.keywordInput = "";
 		
 		$scope.confirmationMessage = $stateParams.confirmationMessage;	// for when user comes from a checkout page
 		
@@ -249,14 +251,71 @@
 				query_display: "Movies with genre '" + genre + "'"	// IMPORTANT: For displaying proper response when no results found!
 			});
 		}
+		
+		$scope.keywordInputChanged = function(str) {
+			$scope.keywordInput = str;
+			$rootScope.keywordInput = str;
+		}
+		
+		$scope.movieSelectedFromKeywordSearch = function($item) {
+			if (!$item)
+				return;
+			
+			var movie = $item.originalObject;
+			$scope.$broadcast('angucomplete-alt:changeInput', 'keyword-angucomplete', movie.movie_title.substring(0,movie.movie_title.length-7));
+			
+			$state.go('movie', {
+				userData: $scope.userData,
+				movieId: movie.movie_id
+			});
+		}
+		
+		$scope.keywordSubmit = function(keywords) {
+			$state.go('results', {
+				userData: $scope.userData,
+				query_type: "BROWSE_BY_MOVIE_KEYWORDS",
+				keywords: keywords,
+				order_by: "title",	// by default
+				order_type: "asc",	// by default
+				offset: $rootScope.offset,
+				limit: $rootScope.limit,
+				query_display: "Movies with title keywords \"" + keywords + "\""	// IMPORTANT: For displaying proper response when no results found!
+			});
+		}
+		
+	    $scope.formatResponse = function(data) {
+	    	if (!data || data.error)
+	    		return [];
+	    	data.movie_data.forEach(function(movie) {
+	    		if (!movie)
+	    			return;
+	    		
+	    		movie.movie_title += " (" + movie.movie_year + ")";
+	    		
+	    		var stars = [];
+	    		if (movie.movie_stars) {
+	    			movie.movie_stars.forEach(function(star) {
+	    				stars.push(star.star_first_name + " " + star.star_last_name);
+	    			});
+	    		}
+	    		movie.movie_stars = stars.join(', ');
+	    	});
+	    	
+	    	return data;
+	    };
+	    
+	    $scope.keywordErrorReceived = function(error) {
+	    	console.log("error! error = ", error);
+	    }
 	});
 	
 	/**
 	 * HTML File: html/results.html
 	 */
-	app.controller('ResultsController', function($scope, $rootScope, $stateParams, $state, $http, SearchService, CartService) {
+	app.controller('ResultsController', function($scope, $rootScope, $sce, $stateParams, $state, $window, $http, SearchService, CartService) {
 		$rootScope.title = "Results";
 		
+		$scope.showPopup = false;
 		$scope.loading = true;
 		$scope.errorName = "";
 		$scope.errorMessage = "";
@@ -275,11 +334,15 @@
 		// Get parameters for browsing by genre
 		$scope.genre = $stateParams.genre;
 		
+		// Get parameters for browsing by parameters
 		$scope.title = $stateParams.title;
 		$scope.year = $stateParams.year;
 		$scope.director = $stateParams.director;
 		$scope.starFirstName = $stateParams.starFirstName;
 		$scope.starLastName = $stateParams.starLastName;
+		
+		// Get parameters for browsing by title keywords
+		$scope.keywords = $rootScope.keywordInput;
 		
 		$scope.TITLE_COLUMN = "Title";
 		$scope.YEAR_COLUMN = "Year";
@@ -397,6 +460,55 @@
 					$scope.year,
 					$scope.director,
 					$scope.starFirstName, $scope.starLastName,
+					$scope.order_by, $scope.order_type, $scope.offset, $scope.limit)
+				.then(function(data) {		
+					if (data) {
+						if (data.error) {
+							$scope.error = data.error;
+							$scope.errorMessage = data.message;
+							$scope.loading = false;
+							return;
+						}
+						
+						$scope.data = data.movie_data;
+						$scope.number_of_results = Number(data.number_of_results);
+						
+						$scope.previousButtonStyle = {cursor: 'pointer'};
+						$scope.nextButtonStyle = {cursor: 'pointer'};
+						
+						$scope.previousButtonDisabled = $scope.offset <= 0;
+						$scope.nextButtonDisabled = $scope.offset + $scope.data.length >= $scope.number_of_results;
+						
+						if ($scope.previousButtonDisabled) {
+							angular.element( document.querySelector( '#previousButton' ) )
+								.addClass('disabled');
+							$scope.previousButtonStyle.cursor = 'default';
+						}
+						if ($scope.nextButtonDisabled) {
+							angular.element( document.querySelector( '#nextButton' ) )
+								.addClass('disabled');
+							$scope.nextButtonStyle.cursor = 'default';
+						}
+						
+						// Set the default values for cart options for each movie
+						$scope.data.forEach(function(movie) {
+							if (!movie.movie_cart_quantity)
+								movie.movie_cart_quantity = 0;
+							movie.addToCartText = "Add to Cart";
+							movie.loadingCartSubmit = false;
+						});
+						
+					} else {
+						$scope.data = null;
+						$scope.number_of_results = 0;
+					}
+					$scope.loading = false;
+				}
+			);
+		}
+		if ($stateParams.query_type == "BROWSE_BY_MOVIE_KEYWORDS") {
+			SearchService.searchByMovieTitleKeywords($http, 
+					$scope.keywords,
 					$scope.order_by, $scope.order_type, $scope.offset, $scope.limit)
 				.then(function(data) {		
 					if (data) {
@@ -592,6 +704,46 @@
 			});
 		}
 		
+		$scope.onMovieMouseover = function(movie, $event) {
+			movie.showPopup = true;
+			var titleElement = document.getElementById('movie-'+movie.movie_id);
+			var popupElement = document.getElementById('moviePopup-'+movie.movie_id);
+			var previewElement = document.getElementById('movieTrailer-'+movie.movie_id);
+			var rect = titleElement.getBoundingClientRect();
+			if ($scope.shownMoviePopup && $scope.shownMoviePopup != movie)
+				$scope.shownMoviePopup.showPopup = false;
+			$scope.shownMoviePopup = movie;
+			
+			console.log($event);
+			if ($event.srcElement == titleElement)
+				popupElement.style.left = ($event.offsetX + 100) + 'px';
+			
+			if ($scope.hidePopupTimeout) {
+				$window.clearTimeout($scope.hidePopupTimeout);
+				$scope.hidePopupTimeout = null;
+			}
+		}
+		
+		$scope.getIframeSrc = function(movie) {
+			if (!movie.movie_trailer_url || movie.movie_trailer_url.indexOf('v=') == -1)
+				return '';
+			return $sce.trustAsResourceUrl(
+					'https://www.youtube.com/embed/' + 
+					movie.movie_trailer_url.substring(movie.movie_trailer_url.indexOf('v=')+2)
+					)
+		}
+		
+		
+		$scope.onMovieMouseLeave = function(movie) {
+			$scope.hidePopupTimeout = $window.setTimeout(function(){
+				$scope.$apply(function()
+				{
+					movie.showPopup = false;
+					$scope.shownMoviePopup = null;
+				});
+			}, 1000);
+		}
+		
 		/**
 		 * Go to the movie page for the clicked movie
 		 */
@@ -608,6 +760,62 @@
 				starId: star_id
 			});
 		}
+		
+		$scope.keywordInputChanged = function(str) {
+			$scope.keywordInput = str;
+			$rootScope.keywordInput = str;
+		}
+		
+		$scope.movieSelectedFromKeywordSearch = function($item) {
+			if (!$item)
+				return;
+			
+			var movie = $item.originalObject;
+			$scope.$broadcast('angucomplete-alt:changeInput', 'keyword-angucomplete', movie.movie_title.substring(0,movie.movie_title.length-7));
+			
+			$state.go('movie', {
+				userData: $scope.userData,
+				movieId: movie.movie_id
+			});
+		}
+		
+		$scope.keywordSubmit = function(keywords) {
+			$state.go('results', {
+				userData: $scope.userData,
+				query_type: "BROWSE_BY_MOVIE_KEYWORDS",
+				keywords: keywords,
+				order_by: "title",	// by default
+				order_type: "asc",	// by default
+				offset: $rootScope.offset,
+				limit: $rootScope.limit,
+				query_display: "Movies with title keywords \"" + keywords + "\""	// IMPORTANT: For displaying proper response when no results found!
+			});
+		}
+		
+	    $scope.formatResponse = function(data) {
+	    	if (!data || data.error)
+	    		return [];
+	    	data.movie_data.forEach(function(movie) {
+	    		if (!movie)
+	    			return;
+	    		
+	    		movie.movie_title += " (" + movie.movie_year + ")";
+	    		
+	    		var stars = [];
+	    		if (movie.movie_stars) {
+	    			movie.movie_stars.forEach(function(star) {
+	    				stars.push(star.star_first_name + " " + star.star_last_name);
+	    			});
+	    		}
+	    		movie.movie_stars = stars.join(', ');
+	    	});
+	    	
+	    	return data;
+	    };
+	    
+	    $scope.keywordErrorReceived = function(error) {
+	    	console.log("error! error = ", error);
+	    }
 	});
 	
 	app.controller('MovieController', function($scope, $rootScope, $stateParams, $state, $http, $window, SearchService, CartService) {
@@ -701,6 +909,62 @@
 		$scope.backClicked = function() {
 			$window.history.back();
 		}
+		
+		$scope.keywordInputChanged = function(str) {
+			$scope.keywordInput = str;
+			$rootScope.keywordInput = str;
+		}
+		
+		$scope.movieSelectedFromKeywordSearch = function($item) {
+			if (!$item)
+				return;
+			
+			var movie = $item.originalObject;
+			$scope.$broadcast('angucomplete-alt:changeInput', 'keyword-angucomplete', movie.movie_title.substring(0,movie.movie_title.length-7));
+			
+			$state.go('movie', {
+				userData: $scope.userData,
+				movieId: movie.movie_id
+			});
+		}
+		
+		$scope.keywordSubmit = function(keywords) {
+			$state.go('results', {
+				userData: $scope.userData,
+				query_type: "BROWSE_BY_MOVIE_KEYWORDS",
+				keywords: keywords,
+				order_by: "title",	// by default
+				order_type: "asc",	// by default
+				offset: $rootScope.offset,
+				limit: $rootScope.limit,
+				query_display: "Movies with title keywords \"" + keywords + "\""	// IMPORTANT: For displaying proper response when no results found!
+			});
+		}
+		
+	    $scope.formatResponse = function(data) {
+	    	if (!data || data.error)
+	    		return [];
+	    	data.movie_data.forEach(function(movie) {
+	    		if (!movie)
+	    			return;
+	    		
+	    		movie.movie_title += " (" + movie.movie_year + ")";
+	    		
+	    		var stars = [];
+	    		if (movie.movie_stars) {
+	    			movie.movie_stars.forEach(function(star) {
+	    				stars.push(star.star_first_name + " " + star.star_last_name);
+	    			});
+	    		}
+	    		movie.movie_stars = stars.join(', ');
+	    	});
+	    	
+	    	return data;
+	    };
+	    
+	    $scope.keywordErrorReceived = function(error) {
+	    	console.log("error! error = ", error);
+	    }
 	});
 	
 	app.controller('StarController', function($scope, $rootScope, $stateParams, $state, $http, $window, SearchService) {
@@ -732,6 +996,62 @@
 		$scope.backClicked = function() {
 			$window.history.back();
 		}
+		
+		$scope.keywordInputChanged = function(str) {
+			$scope.keywordInput = str;
+			$rootScope.keywordInput = str;
+		}
+		
+		$scope.movieSelectedFromKeywordSearch = function($item) {
+			if (!$item)
+				return;
+			
+			var movie = $item.originalObject;
+			$scope.$broadcast('angucomplete-alt:changeInput', 'keyword-angucomplete', movie.movie_title.substring(0,movie.movie_title.length-7));
+			
+			$state.go('movie', {
+				userData: $scope.userData,
+				movieId: movie.movie_id
+			});
+		}
+		
+		$scope.keywordSubmit = function(keywords) {
+			$state.go('results', {
+				userData: $scope.userData,
+				query_type: "BROWSE_BY_MOVIE_KEYWORDS",
+				keywords: keywords,
+				order_by: "title",	// by default
+				order_type: "asc",	// by default
+				offset: $rootScope.offset,
+				limit: $rootScope.limit,
+				query_display: "Movies with title keywords \"" + keywords + "\""	// IMPORTANT: For displaying proper response when no results found!
+			});
+		}
+		
+	    $scope.formatResponse = function(data) {
+	    	if (!data || data.error)
+	    		return [];
+	    	data.movie_data.forEach(function(movie) {
+	    		if (!movie)
+	    			return;
+	    		
+	    		movie.movie_title += " (" + movie.movie_year + ")";
+	    		
+	    		var stars = [];
+	    		if (movie.movie_stars) {
+	    			movie.movie_stars.forEach(function(star) {
+	    				stars.push(star.star_first_name + " " + star.star_last_name);
+	    			});
+	    		}
+	    		movie.movie_stars = stars.join(', ');
+	    	});
+	    	
+	    	return data;
+	    };
+	    
+	    $scope.keywordErrorReceived = function(error) {
+	    	console.log("error! error = ", error);
+	    }
 	});
 	
 	app.controller('CartController', function($scope, $rootScope, $stateParams, $state, $http, $window, CartService) {
@@ -837,6 +1157,62 @@
 				cartData: $scope.cartData
 			});
 		}
+		
+		$scope.keywordInputChanged = function(str) {
+			$scope.keywordInput = str;
+			$rootScope.keywordInput = str;
+		}
+		
+		$scope.movieSelectedFromKeywordSearch = function($item) {
+			if (!$item)
+				return;
+			
+			var movie = $item.originalObject;
+			$scope.$broadcast('angucomplete-alt:changeInput', 'keyword-angucomplete', movie.movie_title.substring(0,movie.movie_title.length-7));
+			
+			$state.go('movie', {
+				userData: $scope.userData,
+				movieId: movie.movie_id
+			});
+		}
+		
+		$scope.keywordSubmit = function(keywords) {
+			$state.go('results', {
+				userData: $scope.userData,
+				query_type: "BROWSE_BY_MOVIE_KEYWORDS",
+				keywords: keywords,
+				order_by: "title",	// by default
+				order_type: "asc",	// by default
+				offset: $rootScope.offset,
+				limit: $rootScope.limit,
+				query_display: "Movies with title keywords \"" + keywords + "\""	// IMPORTANT: For displaying proper response when no results found!
+			});
+		}
+		
+	    $scope.formatResponse = function(data) {
+	    	if (!data || data.error)
+	    		return [];
+	    	data.movie_data.forEach(function(movie) {
+	    		if (!movie)
+	    			return;
+	    		
+	    		movie.movie_title += " (" + movie.movie_year + ")";
+	    		
+	    		var stars = [];
+	    		if (movie.movie_stars) {
+	    			movie.movie_stars.forEach(function(star) {
+	    				stars.push(star.star_first_name + " " + star.star_last_name);
+	    			});
+	    		}
+	    		movie.movie_stars = stars.join(', ');
+	    	});
+	    	
+	    	return data;
+	    };
+	    
+	    $scope.keywordErrorReceived = function(error) {
+	    	console.log("error! error = ", error);
+	    }
 	});
 	
 	
@@ -921,6 +1297,62 @@
 			// TODO: If failure, show error at the top of this screen
 			// TODO: If success, lead to confirmation page
 		}
+		
+		$scope.keywordInputChanged = function(str) {
+			$scope.keywordInput = str;
+			$rootScope.keywordInput = str;
+		}
+		
+		$scope.movieSelectedFromKeywordSearch = function($item) {
+			if (!$item)
+				return;
+			
+			var movie = $item.originalObject;
+			$scope.$broadcast('angucomplete-alt:changeInput', 'keyword-angucomplete', movie.movie_title.substring(0,movie.movie_title.length-7));
+			
+			$state.go('movie', {
+				userData: $scope.userData,
+				movieId: movie.movie_id
+			});
+		}
+		
+		$scope.keywordSubmit = function(keywords) {
+			$state.go('results', {
+				userData: $scope.userData,
+				query_type: "BROWSE_BY_MOVIE_KEYWORDS",
+				keywords: keywords,
+				order_by: "title",	// by default
+				order_type: "asc",	// by default
+				offset: $rootScope.offset,
+				limit: $rootScope.limit,
+				query_display: "Movies with title keywords \"" + keywords + "\""	// IMPORTANT: For displaying proper response when no results found!
+			});
+		}
+		
+	    $scope.formatResponse = function(data) {
+	    	if (!data || data.error)
+	    		return [];
+	    	data.movie_data.forEach(function(movie) {
+	    		if (!movie)
+	    			return;
+	    		
+	    		movie.movie_title += " (" + movie.movie_year + ")";
+	    		
+	    		var stars = [];
+	    		if (movie.movie_stars) {
+	    			movie.movie_stars.forEach(function(star) {
+	    				stars.push(star.star_first_name + " " + star.star_last_name);
+	    			});
+	    		}
+	    		movie.movie_stars = stars.join(', ');
+	    	});
+	    	
+	    	return data;
+	    };
+	    
+	    $scope.keywordErrorReceived = function(error) {
+	    	console.log("error! error = ", error);
+	    }
 	});
 	
 	app.controller('DashboardController', function($scope, $rootScope, $http, $window, LoginService, DashboardService) {
@@ -1307,6 +1739,28 @@
   
 	app.factory('SearchService', function() {
 		return {
+			searchByMovieTitleKeywords: function($http, keywords,
+					order_by, order_type, offset, limit ) {
+				// HTTP GET runs asnychronously
+				return $http({
+					method: 'GET',
+					url: 'http://localhost:8080/FabFlix/servlet/FabFlixSearchServlet',	
+					params: { 
+						query_type: "BROWSE_BY_MOVIE_KEYWORDS",
+						keywords: keywords,
+						order_by: order_by,
+						order_type: order_type,
+						offset: offset,
+						limit: limit
+					}
+				// IMPORTANT: query_type parameter determines the type of GET operation to use!
+				}).then(function successCallback(response) {
+					return response.data;
+				}, function errorCallback(response) {
+					return null;
+				});
+			},
+			
 			searchByMovieParameters: function($http, title, year, director, 
 					starFirstName, starLastName, 
 					order_by, order_type, offset, limit ) {

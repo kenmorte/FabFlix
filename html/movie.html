@@ -24,6 +24,36 @@
 			    			Shopping Cart
 			    		</a>
 			    	</li>
+			    	<li>
+			    		<div class="container-fluid navbar-input-group" style="margin-top: 8px;">
+							<angucomplete-alt id="keyword-angucomplete"
+								 placeholder="Search for movies by title keywords"
+								 pause="300"
+								 selected-object="movieSelectedFromKeywordSearch"
+								 remote-url="http://localhost:8080/FabFlix/servlet/FabFlixSearchServlet?query_type=BROWSE_BY_MOVIE_KEYWORDS&keywords="
+								 remote-url-response-formatter="formatResponse"
+								 remote-url-data-field="movie_data"			
+								 remote-url-error-callback="keywordErrorReceived"	
+								 title-field="movie_title"
+								 description-field="movie_stars"
+								 image-field="movie_banner_url"
+								 minlength="1"
+								 input-class="form-control form-control-small"
+								 match-class="highlight"
+								 text-searching="Searching for movies..."
+								 text-no-results="No movies found!"
+								 input-changed="keywordInputChanged"
+								 style="display: inline-block; width: 475px;">
+							</angucomplete-alt>
+							<button 
+								class="btn btn-primary" 
+								type="button" 
+								ng-click="keywordSubmit(keywordInput)"
+								style="display: inline-block;">
+								<span class="glyphicon glyphicon-search" aria-hidden="true"></span>
+							</button>
+						</div>
+			    	</li>
 				</ul>
 			    <ul class="nav navbar-nav navbar-right">
 			    	<li>
