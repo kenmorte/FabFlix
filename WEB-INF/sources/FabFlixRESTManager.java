@@ -1184,13 +1184,6 @@ public class FabFlixRESTManager
 		ResultSet result;
 		statement = mDatabase.createStatement(); 
 		json = new JSONObject();
-		System.out.println("call add_movie(\"" 
-				+ title + "\"," + 
-				"" + year + "," + 
-				"\"" + director +  "\"," + 
-				"\"" + firstName + "\"," + 
-				"\"" + lastName + "\"," + 
-				"\"" + genre + "\")");
 		result = statement.executeQuery("call add_movie(\"" 
 			+ title + "\"," + 
 			"" + year + "," + 
@@ -1268,17 +1261,12 @@ public class FabFlixRESTManager
 		if (keywords == null)
 			return "";
 		String[] keywordTokens = keywords.split(" ");
-		String result = " where ";
+		String result = " where match (m.title) against (\"";
 		
-		// Get the first keyword token if there is one
-		if (keywordTokens.length > 0)
-			result += "m.title like \"%" + keywordTokens[0] + "%\"";
-		else
-			return "";
+		for (int i = 0; i < keywordTokens.length; i++)
+			result += "+" + keywordTokens[i] + "* ";
 		
-		for (int i = 1; i < keywordTokens.length; i++)
-			result += " and m.title like \"%" + keywordTokens[i] + "%\" ";
-		
+		result += "\" in boolean mode)";
 		return result;
 	}
 	

@@ -47,7 +47,7 @@ public class FabFlixLoginServlet extends HttpServlet {
     		restManager = new FabFlixRESTManager(out);
     		restManager.attemptConnection();
     		
-    		if (type.equals("_user")) {
+    		if (type.equals("_user") || type.equals("_mobile_user")) {
         		JSONObject userJSON = restManager.getUserInfo(email, password);
         		result.put("error", "null");
         		if (userJSON != null) {

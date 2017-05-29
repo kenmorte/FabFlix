@@ -5,7 +5,8 @@ CREATE TABLE `movies` (
    `director` varchar(100) NOT NULL,
    `banner_url` varchar(200) DEFAULT NULL,
    `trailer_url` varchar(200) DEFAULT NULL,
-   PRIMARY KEY (`id`)
+   PRIMARY KEY (`id`),
+   FULLTEXT(`title`)
  ) ENGINE=InnoDB AUTO_INCREMENT=907010 DEFAULT CHARSET=utf8;
 CREATE TABLE `stars` (
    `id` int(11) NOT NULL AUTO_INCREMENT,

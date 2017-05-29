@@ -728,7 +728,7 @@
 			if (!movie.movie_trailer_url || movie.movie_trailer_url.indexOf('v=') == -1)
 				return '';
 			return $sce.trustAsResourceUrl(
-					'https://www.youtube.com/embed/' + 
+					'http://www.youtube.com/embed/' + 
 					movie.movie_trailer_url.substring(movie.movie_trailer_url.indexOf('v=')+2)
 					)
 		}
@@ -1316,6 +1316,7 @@
 			});
 		}
 		
+	
 		$scope.keywordSubmit = function(keywords) {
 			$state.go('results', {
 				userData: $scope.userData,
