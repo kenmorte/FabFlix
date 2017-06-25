@@ -1,4 +1,4 @@
 # FabFlix
 
 ### Links ###
-AWS Instance: http://54.153.23.102:8080/FabFlix/#!/home
+AWS Instance: http://35.185.205.49/FabFlix/#!/home
